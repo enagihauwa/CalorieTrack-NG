@@ -151,14 +151,25 @@ BMR/TDEE/goal-adjustment calculation (`src/lib/calorie-target.ts`, fully
 unit-tested) since the profile form needs it at save time. See
 `tickets/INDEX.md`'s "Cross-epic build-order exceptions" for why.
 
+**EPIC-03** (food database) is also implemented: the `Food` model
+(already migrated as part of EPIC-00), a seed script covering all 20
+foods named across Sections 4 and 15 (`prisma/seed.ts`, sourced from
+standard nutrition references — Section 10's own worked example for
+Jollof Rice), and a read-only, paginated `/api/foods` + `/api/foods/:id`
+API that excludes archived foods from listings while still resolving
+them by id for historical entries.
+
 Verified with a production build, typecheck, lint, tests (11 passing),
 and headless-browser smoke tests. A local PostgreSQL 18 instance was set
-up (see `journal.md`'s 2026-08-29 later entry) and the migration applied
-— every route, every redirect, and the full sign-up → onboarding →
+up (see `journal.md`'s 2026-08-29 later entry) and every migration
+applied — every route, every redirect, the full sign-up → onboarding →
 dashboard → edit → logout → login → wrong-password → duplicate-email
-flow has now been exercised end-to-end against a real database, with
-zero console errors. Every EPIC-00 and EPIC-01 ticket is marked `Done`.
+flow, the seed script's idempotency, and the food API's pagination/
+archiving behavior have all been exercised end-to-end against a real
+database, with zero console errors. Every EPIC-00, EPIC-01, and EPIC-03
+ticket is marked `Done`.
 
-Next up per `tickets/INDEX.md`: `EPIC-03` (food database) — `EPIC-02`'s
-remaining scope (macro targets, `TICKET-013`) is what's left there after
-the calculation core was pulled into EPIC-01.
+Next up per `tickets/INDEX.md`: `EPIC-04` (food search & add) — building
+on the food API this epic just finished. `EPIC-02`'s remaining scope
+(macro targets, `TICKET-013`) is still open but blocks nothing ahead of
+it in the build order.

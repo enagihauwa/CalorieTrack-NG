@@ -422,3 +422,81 @@ are gitignored, not committed.
 **Next up**
 
 `EPIC-03` (food database) per the build order.
+
+---
+
+## 2026-08-29 (still later) — Implemented EPIC-03 (food database)
+
+**What I worked on**
+
+`TICKET-015` (Food model) was already done as part of EPIC-00's schema
+work, so this was really `TICKET-016` (seed data) and `TICKET-017`
+(read API).
+
+**Seed data**
+
+Compiled every food named in Section 4's examples and Section 15's
+Nigerian-food list into `prisma/seed.ts` — 20 foods after de-duplicating
+names that refer to the same dish (Section 4's generic "Rice"/"Egg" vs.
+Section 15's "White Rice"/"Eggs" — seeded once each under the more
+descriptive name rather than as near-duplicate rows, noted in a comment
+so it doesn't look like an oversight). Values are approximate MVP
+defaults sourced from standard nutrition references (USDA FoodData
+Central for generic staples, commonly published estimates for Nigerian
+dishes) — except Jollof Rice, which uses Section 10's own worked example
+verbatim (350 kcal, 8g protein, 55g carbs, 12g fat) since the brief
+already hands over an authoritative figure for that one.
+
+Idempotency (`TICKET-016`'s requirement) is a plain "skip if a food with
+this name already exists" check rather than a schema-level unique
+constraint on `name` — avoids a migration and, more importantly, means a
+future admin edit to a seeded food (`TICKET-042`) survives a re-seed
+instead of being silently overwritten. Wired up via `package.json`'s
+`prisma.seed` field and installed `tsx` to run it (Prisma needs a
+TS-runner for seed scripts; `tsx` is the lightweight standard choice).
+Ran it twice against the real database to confirm idempotency directly:
+first run created 20, second created 0 and skipped 20.
+
+**Read API**
+
+`GET /api/foods` (paginated list, excludes archived) and
+`GET /api/foods/:id` (single food, *includes* archived — a historical
+`MealEntry` still needs to resolve a soft-deleted food's name) as Next.js
+Route Handlers. Both require an authenticated session, matching how every
+other route in the app behaves — nothing in this MVP is meant to be
+reachable signed out, so there was no reason to make these the exception.
+Deliberately left out search/filter query params — that's `TICKET-018`'s
+job in EPIC-04, and adding it now would mean building ahead of the
+ticket that actually owns that decision.
+
+**Verification**
+
+All against the real PostgreSQL database, not mocked:
+- Unauthenticated requests to both endpoints return `401`.
+- Authenticated (via a real signed-up session, driven through a headless
+  browser): list returns all 20 seeded foods, alphabetically sorted;
+  pagination at `pageSize=5` produces 4 pages with no overlap between
+  page 1 and page 2; fetching Jollof Rice by id returns exactly Section
+  10's figures; a nonexistent id returns `404`.
+- Archived-food behavior: archived "Fish" directly in the database,
+  confirmed the list dropped from 20 to 19 results and no longer included
+  it, then confirmed `GET /api/foods/:id` for that same id still
+  resolved it with `isArchived: true` — exactly the split TICKET-017
+  specifies. Unarchived it afterward.
+
+**Cleanup**
+
+Truncated `User`/`Profile`/`WeightLog`/`MealEntry` after verification
+(test accounts created during the run) but left the seeded `Food` table
+alone — that's real product data the app should ship with, not test
+data to throw away.
+
+**State at end of session**
+
+Every EPIC-00, EPIC-01, and EPIC-03 ticket is `Done`. Build, typecheck,
+lint, tests (11 passing), and format all clean.
+
+**Next up**
+
+`EPIC-04` (food search & add) per the build order — the food API this
+epic just built is exactly what `TICKET-018` (search) needs to extend.
