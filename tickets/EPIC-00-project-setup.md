@@ -6,7 +6,7 @@ Not a feature from the brief — the groundwork every other epic depends on.
 
 ## TICKET-001: Initialize repository & tooling
 
-**Priority:** P0 · **Status:** Mostly done — blocked on a real database · **Depends on:** —
+**Priority:** P0 · **Status:** Done · **Depends on:** —
 
 ### Description
 Scaffold the Next.js + TypeScript project, install the chosen dependencies
@@ -22,15 +22,12 @@ Scaffold the Next.js + TypeScript project, install the chosen dependencies
       verification)
 - [x] Prisma CLI + Client installed, schema written, `prisma generate`
       succeeds
-- [ ] **Not yet connected to a running PostgreSQL instance.** This dev
-      sandbox has neither `psql` nor Docker available, so
-      `prisma migrate dev` has not been run against a real database —
-      only schema validation (`prisma generate`) has been verified.
-      Whoever runs this next needs: a Postgres instance (local install,
-      Docker, or a hosted dev DB like Neon/Supabase — matches the
-      README's stack decision), `DATABASE_URL` set in `.env.local`, then
-      `npx prisma migrate dev --name init` to create the first migration
-      and apply it
+- [x] Connected to a running PostgreSQL instance and migrated
+      (`npx prisma migrate dev --name init`) — see TICKET-003. Found an
+      existing local PostgreSQL 18 Windows service already running on
+      this machine and created a dedicated `calorietrack_ng`
+      role/database on it rather than installing anything new — see
+      `journal.md`'s 2026-08-29 (later) entry for how
 - [x] `.env.example` documents `DATABASE_URL`, `NEXTAUTH_SECRET`,
       `NEXTAUTH_URL`
 - [x] `.gitignore` excludes `node_modules`, `.env*` (with `.env.example`
@@ -62,7 +59,7 @@ everything else.
 
 ## TICKET-003: Database schema & ORM setup
 
-**Priority:** P0 · **Status:** Schema done, migration unverified (no DB in this environment) · **Depends on:** TICKET-001
+**Priority:** P0 · **Status:** Done · **Depends on:** TICKET-001
 
 ### Description
 Define the initial Prisma schema covering the entities needed across
@@ -84,11 +81,11 @@ Pinned `prisma`/`@prisma/client` to `6.19.3` (exact) rather than
 - [x] Prisma schema defines `User`, `Profile`, `Food`, `MealEntry`,
       `WeightLog` with correct relations (1 user → 1 profile, 1 user →
       many meal entries, 1 meal entry → 1 food, 1 user → many weight logs)
-- [ ] **Initial migration not yet run.** `npx prisma generate` succeeds
-      (schema is valid), but `npx prisma migrate dev` has not been
-      executed — this sandbox has no PostgreSQL instance or Docker
-      available to run one against. First real task for whoever has a
-      database available.
+- [x] Initial migration created and applied
+      (`prisma/migrations/20260829011450_init`) against a real PostgreSQL
+      18 database — all 5 tables + 5 enums + indexes + foreign keys
+      confirmed present via `psql \dt` and exercised end-to-end through
+      EPIC-01's sign-up/profile flow (see that epic's top note)
 - [x] Schema reviewed against Section 10's food fields (name, category,
       calories, protein, carbs, fat, serving size) — all present, plus
       `servingSize` documented as a display string, not arithmetic input
@@ -108,9 +105,11 @@ Vite-family tooling already in the Next.js/Tailwind toolchain.
 ### Acceptance Criteria
 - [x] `npm run lint`, `npm run format` / `format:check`, `npm run
       typecheck` all run clean against the current codebase
-- [x] Test runner (Vitest) configured, `npm run test` runs; one
-      placeholder test passing (`src/lib/placeholder.test.ts`, to be
-      replaced by EPIC-02's real pure-function tests)
+- [x] Test runner (Vitest) configured, `npm run test` runs; originally
+      one placeholder test, since replaced by real coverage
+      (`src/lib/calorie-target.test.ts`, 11 tests) once EPIC-01 pulled
+      forward the calorie-calculation pure functions — see
+      `tickets/EPIC-01-auth-profile.md`
 - [x] Markdown planning docs (`*.md`) excluded from Prettier's scope —
       they're hand-formatted prose/tables, not code; auto-reformatting
       them wasn't the intent of this ticket
@@ -129,10 +128,13 @@ available from the shell. Build the layout shell and routing skeleton
 (empty pages are fine — content is filled in by later epics).
 
 Built as `src/components/main-nav.tsx` (client component, uses
-`usePathname` for active-route state) wired into `src/app/layout.tsx`.
-Root `/` redirects to `/dashboard`. Placeholder pages share one
-`PlaceholderPage` component so each route's "not built yet" state points
-at the ticket that will fill it in.
+`usePathname` for active-route state), wired into
+`src/app/(app)/layout.tsx` (moved there from the root layout during
+EPIC-01, when routes were split into protected `(app)` and public
+`(auth)` groups — see `tickets/EPIC-01-auth-profile.md`). Root `/`
+redirects to `/dashboard` (now auth-aware — see EPIC-01). Placeholder
+pages share one `PlaceholderPage` component so each route's "not built
+yet" state points at the ticket that will fill it in.
 
 ### Acceptance Criteria
 - [x] Persistent navigation with exactly the five sections from Section 12

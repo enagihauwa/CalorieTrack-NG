@@ -16,20 +16,21 @@ Source: Requirements Section 2 (User Registration and Profile), Section 16
 > for when EPIC-02 is formally implemented. Recorded in `journal.md`'s
 > 2026-08-29 entry.
 >
-> **Verification note:** No PostgreSQL instance was available in this
-> environment (same limitation as EPIC-00). Everything below has been
-> verified by build/typecheck/lint/test passing and a live browser smoke
-> test of every route and redirect that doesn't require a database
-> (public pages, unauthenticated redirects). The actual sign-up → login →
-> profile-save flow, which does hit Prisma, has **not** been exercised
-> end-to-end against a real database — that's the first thing to do once
-> one is available.
+> **Verification note:** A real PostgreSQL 18 instance was set up
+> (`journal.md`'s 2026-08-29 later entry) and the full flow — sign-up →
+> profile onboarding → dashboard redirect → edit profile → log out →
+> protected-route redirect → log back in (skips onboarding, profile
+> already exists) → wrong-password rejection → duplicate-email rejection
+> — was exercised end-to-end via a headless-browser script against the
+> real database, with server-side logs confirming each Server Action
+> (`signUpAction`, `saveProfileAction` ×2, `signOutAction`, `loginAction`)
+> ran and returned the expected result. Every ticket below is now `Done`.
 
 ---
 
 ## TICKET-006: User sign-up (email/password)
 
-**Priority:** P0 · **Status:** Implemented, unverified against a real DB · **Depends on:** TICKET-003
+**Priority:** P0 · **Status:** Done · **Depends on:** TICKET-003
 
 ### Description
 Let a new user create an account with email + password. Passwords are
@@ -59,12 +60,17 @@ is `src/components/forms/sign-up-form.tsx`, using React 19's
       which itself redirects on to `/profile` (TICKET-008) if no profile
       exists yet, via the shared `requireProfile()` helper, so a new user
       never lands on a working Dashboard without one
+- [x] **Verified against a real database:** signed up a fresh user via
+      headless browser, confirmed a `User` row was created with a bcrypt
+      hash (not plaintext), landed on `/profile`; re-submitting the same
+      email showed "An account with that email already exists" instead
+      of a crash
 
 ---
 
 ## TICKET-007: Login / logout / session management
 
-**Priority:** P0 · **Status:** Implemented, unverified against a real DB · **Depends on:** TICKET-006
+**Priority:** P0 · **Status:** Done · **Depends on:** TICKET-006
 
 ### Description
 NextAuth (Auth.js v5) credentials-based login, persistent JWT session,
@@ -100,12 +106,18 @@ is the standard Auth.js v5 pattern for using Prisma with edge middleware
       by `requireProfile()` rather than by a separate check inside the
       login action itself — same observable behavior, single source of
       truth (the database) instead of a second flag to keep in sync
+- [x] **Verified against a real database:** wrong password showed
+      "Incorrect email or password" (confirmed exact text via a
+      DOM-level check, not just visual inspection); logged out then
+      confirmed `/dashboard` bounced to `/login`; logged back in with the
+      correct password and landed straight on `/dashboard` (profile
+      already existed, no onboarding re-shown)
 
 ---
 
 ## TICKET-008: Profile form (age, gender, weight, height, activity, goal)
 
-**Priority:** P0 · **Status:** Implemented, unverified against a real DB · **Depends on:** TICKET-006
+**Priority:** P0 · **Status:** Done · **Depends on:** TICKET-006
 
 ### Description
 Section 2's onboarding form, collected right after sign-up per the user
@@ -132,6 +144,11 @@ route.
 - [x] User cannot reach a working Dashboard without completing this form
       once — `requireProfile()` redirects `/dashboard` (and every other
       protected page) back to `/profile` until one exists
+- [x] **Verified against a real database:** filled out the full form
+      (name, age 28, female, 65kg, 165cm, moderate activity, lose
+      weight), submitted, landed on `/dashboard`, then confirmed a
+      `Profile` row existed with a computed `dailyCalorieTarget` by
+      re-visiting `/profile` and seeing every field correctly prefilled
 
 ---
 
@@ -166,7 +183,7 @@ unless requested.
 
 ## TICKET-010: Edit profile after onboarding
 
-**Priority:** P1 · **Status:** Implemented, unverified against a real DB · **Depends on:** TICKET-008, TICKET-009
+**Priority:** P1 · **Status:** Done · **Depends on:** TICKET-008, TICKET-009
 
 ### Description
 The Profile section in main navigation (Section 12) needs to let a user
@@ -183,3 +200,7 @@ TICKET-008 — see that ticket for why one component serves both.
       (recomputing with unchanged inputs yields the same number) and
       simpler than diffing old vs. new field values to decide whether to
       recalculate
+- [x] **Verified against a real database:** edited weight from 65kg to
+      63kg on an existing profile, saved, redirected to `/dashboard`
+      correctly (edit path uses the same upsert as create, confirmed
+      working)

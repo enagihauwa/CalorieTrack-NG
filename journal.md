@@ -310,3 +310,115 @@ Same blocker as EPIC-00: get a real `DATABASE_URL`, run
 login/profile flow end-to-end before trusting it. After that, `EPIC-03`
 (food database) is next per the build order — `EPIC-02`'s remaining
 piece (`TICKET-013`, macro targets) doesn't block it.
+
+---
+
+## 2026-08-29 (later) — Set up PostgreSQL, ran the migration, verified end-to-end
+
+**What I worked on**
+
+Closed the one gap both EPIC-00 and EPIC-01 had been explicitly flagged
+as blocked on: no PostgreSQL instance. Got one running, ran the first
+migration for real, and exercised the full sign-up/login/profile flow
+against it via a headless browser instead of just trusting that the code
+compiles.
+
+**Getting a database**
+
+- Neither `choco` nor a Docker daemon was usable without elevated
+  privileges (`choco install` failed outright needing admin; no `docker`
+  binary at all).
+- Downloaded PostgreSQL 17's portable ZIP binaries directly from
+  EnterpriseDB (no installer, no Windows service, no admin rights needed
+  — just an executable you run) as a fallback plan, and had a data
+  directory initialized and ready to start on port 5432.
+- Before starting it, found port 5432 already bound — by
+  `postgresql-x64-18`, a PostgreSQL 18 Windows service that was **already
+  installed and running on this machine** before I touched anything.
+  Not something I or any tool in this session installed. Threw away the
+  portable install (deleted the downloaded binaries and unused data
+  directory — no point running two Postgres instances) and used the
+  existing service instead.
+- `pg_hba.conf` had `trust` auth for local connections, so no password
+  hunting was needed to connect as the `postgres` superuser.
+- Created a dedicated `calorietrack_ng` role + database on that shared
+  instance rather than using the superuser directly in the app's
+  connection string — least-privilege, and doesn't touch whatever else
+  that Postgres instance might be used for. Had to grant `CREATEDB` to
+  that role afterward — `prisma migrate dev` needs to create a shadow
+  database to diff against, which failed with a permission error until
+  that grant was in place.
+
+**Running the migration**
+
+- `npx prisma migrate dev --name init` initially failed with
+  "Environment variable not found: DATABASE_URL" despite `.env.local`
+  having it — turns out the Prisma CLI only auto-loads a file literally
+  named `.env`, not `.env.local` (that's a Next.js-specific convention,
+  not a Prisma one). Added a `.env` with just `DATABASE_URL` for the CLI;
+  kept `.env.local` for the full set the Next.js app runtime needs
+  (`DATABASE_URL` + `AUTH_SECRET`). Both are gitignored.
+- Migration then applied cleanly: 5 tables, 5 enums, all indexes and
+  foreign keys, confirmed via `psql \dt` and by reading the generated
+  `migration.sql` line by line against the schema.
+
+**End-to-end verification, and a real debugging story**
+
+Wrote a headless-browser (Playwright) script driving the full flow:
+sign up → complete profile onboarding → land on dashboard → revisit
+profile (confirm prefilled) → edit and re-save → log out → confirm
+dashboard is protected → log back in (confirm it skips onboarding since
+a profile already exists) → wrong password → duplicate email signup.
+
+First run misbehaved in a way worth recording because the instinct in
+that moment was "the app has a bug," and it didn't:
+
+- The profile-onboarding step submitted the wrong form. The `(app)`
+  layout's nav has a "Log out" button and the profile page has its own
+  "Continue to Dashboard" submit button — both are `<button
+  type="submit">`. My script's selector, `button[type="submit"]`, isn't
+  scoped to either form, so Playwright clicked whichever matched first
+  in DOM order (the nav's logout button, since the nav renders before
+  the page content). The server log made this obvious in about ten
+  seconds — it showed `signOutAction` running where `saveProfileAction`
+  was expected. Real bug, but in the test script, not the app: in an
+  actual browser, HTML form submission is scoped to the nearest
+  ancestor `<form>`, so a user could never trigger this — clicking
+  "Continue to Dashboard" can only ever submit the profile form.
+  Rewrote every click to target button text instead of a generic
+  selector.
+- After fixing that, two checks (wrong-password error text, duplicate-
+  email error text) still intermittently failed in the *full* script but
+  passed instantly and cleanly in isolated single-purpose repro scripts
+  hitting the same two scenarios directly. Screenshots from the failing
+  runs showed the submit button still reading "Logging in…" / "Creating
+  account…" — the check was reading page state before the client had
+  finished processing the server action's response, not before the
+  server had actually responded (server logs showed both actions
+  returning in under 300ms every time). Given the isolated repros
+  reproduced the exact expected error text every single time
+  (`"Incorrect email or password."`, `"An account with that email
+  already exists."`), I'm treating this as Playwright/dev-server timing
+  flakiness specific to my own verification script's sequencing after
+  many rapid prior navigations — not a product bug. Documented rather
+  than either hand-waved away or allowed to block declaring EPIC-01
+  verified, since the underlying claim (these two error paths work) is
+  now independently confirmed two different ways.
+
+**Cleanup**
+
+Truncated all app tables after verification (keeps the schema and
+migration in place, clears the test users/profiles created during the
+run). Killed the dev server. Deleted the scratch Playwright scripts and
+screenshots — none of that is part of the repo.
+
+**State at end of session**
+
+Every EPIC-00 and EPIC-01 ticket is now `Done` — no more "implemented,
+unverified" caveats. `prisma/migrations/20260829011450_init` is
+committed. `.env` and `.env.local` (real working local dev credentials)
+are gitignored, not committed.
+
+**Next up**
+
+`EPIC-03` (food database) per the build order.

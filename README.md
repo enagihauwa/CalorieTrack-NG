@@ -152,19 +152,12 @@ unit-tested) since the profile form needs it at save time. See
 `tickets/INDEX.md`'s "Cross-epic build-order exceptions" for why.
 
 Verified with a production build, typecheck, lint, tests (11 passing),
-and headless-browser smoke tests — every route, every unauthenticated
-redirect, and both public forms render correctly with zero console
-errors.
-
-**Not yet done:** no PostgreSQL instance was available in the environment
-this was built in, so nothing that touches Prisma at runtime — sign-up,
-login, profile save — has been exercised end-to-end against a real
-database. Schema validation (`prisma generate`) passes; the actual
-migration (`npx prisma migrate dev --name init`) has never been run. This
-is the first thing to do next — see `TICKET-001`/`TICKET-003` in
-`tickets/EPIC-00-project-setup.md`, and `TICKET-006`–`010` in
-`tickets/EPIC-01-auth-profile.md` for what to verify once a database is
-available.
+and headless-browser smoke tests. A local PostgreSQL 18 instance was set
+up (see `journal.md`'s 2026-08-29 later entry) and the migration applied
+— every route, every redirect, and the full sign-up → onboarding →
+dashboard → edit → logout → login → wrong-password → duplicate-email
+flow has now been exercised end-to-end against a real database, with
+zero console errors. Every EPIC-00 and EPIC-01 ticket is marked `Done`.
 
 Next up per `tickets/INDEX.md`: `EPIC-03` (food database) — `EPIC-02`'s
 remaining scope (macro targets, `TICKET-013`) is what's left there after
