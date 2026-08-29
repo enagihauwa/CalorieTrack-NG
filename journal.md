@@ -600,3 +600,94 @@ passing), and format all clean.
 `TICKET-023` (EPIC-05's shared meal-breakdown UI component) — not
 deferred, it's the natural first step into `EPIC-06` (Dashboard), which
 explicitly depends on it.
+
+---
+
+## 2026-08-29 (last one today) — Implemented EPIC-06 (Dashboard)
+
+**What I worked on**
+
+`TICKET-023` (EPIC-05, meal breakdown component), `TICKET-013` (EPIC-02,
+macro targets — pulled forward the same way `TICKET-011`/`012` were for
+EPIC-01), and all of EPIC-06: `TICKET-025` (layout), `TICKET-026`
+(progress bar), `TICKET-027` (macro display), `TICKET-028` (warning),
+`TICKET-029` (aggregation).
+
+**What got built**
+
+- `src/lib/date-only.ts` — extracted the `toDateOnly()` helper that used
+  to live only in `meal-entry.ts`, since `daily-summary.ts` needs the
+  exact same "what date is 'today' in this @db.Date column" logic and
+  duplicating it would risk the two drifting apart.
+- `src/lib/calorie-target.ts` gained `calculateMacroTargets()` — 30%
+  protein / 40% carbs / 30% fat of the daily calorie target, converted
+  to grams (4 kcal/g protein & carbs, 9 kcal/g fat). Chose a standard
+  balanced split rather than a goal-specific one, since the brief only
+  asks for macro *targets*, not per-goal macro tuning.
+- `saveProfileAction` now computes and stores the macro targets too,
+  alongside the calorie target it already computed — closing out the
+  last open piece of `TICKET-014` from EPIC-01.
+- `src/lib/daily-summary.ts` — `getDailySummary(userId, date)`, one
+  Prisma query (`findMany` with the food relation included), grouped by
+  meal category in memory afterward. A plain function, not a JSON API —
+  every consumer (Dashboard now, History later) is a Server Component in
+  the same process, so there's no reason to round-trip through HTTP.
+- `src/components/meal-breakdown.tsx`, `calorie-progress.tsx`,
+  `macro-progress.tsx` — three small, pure presentational components,
+  each taking already-computed data as props. Empty meal categories are
+  hidden entirely (documented choice, matches Section 5's example).
+- `src/app/(app)/dashboard/page.tsx` composes all of it.
+
+**Verification — the most thorough pass yet**
+
+Wrote a script that captures the *ground truth* from the database (the
+computed `dailyCalorieTarget` and macro targets, read directly via
+`psql`) before ever touching the UI, then checks the Dashboard's
+displayed numbers against that ground truth — not against a value I
+typed into the test by hand. Used known profile inputs (male, 70kg,
+175cm, age 30, sedentary, maintain) so the expected target was
+verifiable by the same formula the app uses, but the actual assertions
+compared the UI against what the database actually stored, which is the
+stronger check.
+
+Three states verified:
+1. **Empty** — 0 kcal consumed, remaining = target, no warning, "Nothing
+   logged for this day yet.", both macro rows at `0g / Xg`.
+2. **Under target** — logged Jollof Rice (Breakfast), Beans (Lunch),
+   Egusi Soup (Dinner); consumed = 350+254+400 = 1004 exactly; remaining
+   = target−1004 exactly; three category headers with correct subtotals;
+   empty Snacks category correctly hidden; macro grams matched a hand
+   sum of the three foods' stored macros (protein 8+15.2+18=41.2→41g,
+   confirmed against the rendered `41g / 148g`).
+3. **Over target** — added 5× Egusi Soup (2000 kcal) under Snacks;
+   consumed = 3004 exactly; warning text read "...exceeded your daily
+   calorie target by 1025 kcal" — 3004−1979=1025, exact; progress bar
+   screenshot confirmed red at full width; Remaining correctly floored
+   to `0 kcal` instead of going negative.
+
+Also fixed a Windows-specific `execSync` quoting bug in the verification
+script itself along the way: passing a `SELECT "column" FROM "Table"`
+query as an inline `-c "..."` argument through `execSync` silently
+stripped the double quotes (Windows shell quoting, not a psql issue),
+causing "relation does not exist" errors on every query. Fixed by
+writing the SQL to a temp file and using `psql -f` instead of `-c`.
+Noting it here since it'll happen again the next time a verification
+script needs to query Postgres from Node on this machine.
+
+**Cleanup**
+
+Truncated `User`/`Profile`/`WeightLog`/`MealEntry` after verification;
+seeded `Food` data untouched.
+
+**State at end of session**
+
+Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, and EPIC-06 ticket is `Done`,
+plus all of EPIC-02 (`TICKET-011`–`014`) and EPIC-05's `TICKET-021`–
+`023`. Build, typecheck, lint, tests (13 passing), and format all clean.
+
+**Next up**
+
+`EPIC-07` (food history) per the build order. `TICKET-024` (edit/delete
+a logged entry, EPIC-05) is open and unblocked but wasn't picked up this
+session — noted as a candidate whenever history or dashboard polish
+becomes the priority.

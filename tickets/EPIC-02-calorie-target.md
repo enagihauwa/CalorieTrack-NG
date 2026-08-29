@@ -68,40 +68,49 @@ Implemented at `src/lib/calorie-target.ts` (`calculateDailyCalorieTarget`).
 
 ## TICKET-013: Macronutrient targets (protein/carbs/fat)
 
-**Priority:** P1 · **Status:** Not Started · **Depends on:** TICKET-012
+**Priority:** P1 · **Status:** Done (implemented during EPIC-06) · **Depends on:** TICKET-012
 
 ### Description
 Section 3 shows macro targets alongside the calorie target (e.g.
 "Protein: 75g / 120g"). Derive gram targets from the daily calorie target
 using a defined macro split.
 
+Implemented at `src/lib/calorie-target.ts` (`calculateMacroTargets`),
+pulled forward once EPIC-06's `TICKET-027` (macro progress display)
+needed it — same reasoning as `TICKET-011`/`012` being pulled into
+EPIC-01. Split: 30% protein / 40% carbohydrate / 30% fat — a standard
+balanced-diet default, not goal-specific (the brief doesn't ask for
+per-goal macro tuning, only gram targets).
+
 ### Acceptance Criteria
-- [ ] Macro split defined as documented percentages of total calories
-      (e.g. protein/carb/fat ratio) — recorded here, not implicit in code
-- [ ] Converts calorie share → grams using 4 kcal/g (protein, carbs) and
+- [x] Macro split defined as documented percentages of total calories
+      (30/40/30 protein/carbs/fat — see `MACRO_CALORIE_SHARE` in
+      `calorie-target.ts`, not implicit)
+- [x] Converts calorie share → grams using 4 kcal/g (protein, carbs) and
       9 kcal/g (fat)
-- [ ] Unit tests confirm grams sum back to the calorie target within
-      rounding tolerance
+- [x] Unit tests confirm grams sum back to the calorie target within
+      rounding tolerance, plus an exact-value test (2000 kcal → 150g
+      protein / 200g carbs / 67g fat)
+- [x] **Verified against a real database:** a profile with a 1979 kcal
+      target produced exactly 148g protein / 198g carbs / 66g fat,
+      stored on `Profile` and rendered correctly on the Dashboard
 
 ---
 
 ## TICKET-014: Recalculate target on profile update
 
-**Priority:** P1 · **Status:** Calorie target done (via EPIC-01); macro portion blocked on TICKET-013 · **Depends on:** TICKET-012, TICKET-010
+**Priority:** P1 · **Status:** Done · **Depends on:** TICKET-012, TICKET-010
 
 ### Description
 Wire TICKET-010 (profile edit) to re-run TICKET-011/012/013 whenever a
 field that affects the calculation changes, so the Dashboard always
 reflects the current profile.
 
-`saveProfileAction` (`src/lib/actions/profile.ts`, built during EPIC-01)
-recomputes `dailyCalorieTarget` unconditionally on every save — simpler
-than diffing old vs. new field values, and observably identical, since
-recomputing with unchanged inputs yields the same number. That already
-satisfies this ticket's intent for the calorie target. Once TICKET-013
-lands, the same action needs to compute and persist the macro targets
-the same way — noted here so it isn't missed when that ticket is picked
-up.
+`saveProfileAction` (`src/lib/actions/profile.ts`) recomputes both
+`dailyCalorieTarget` and the three macro target fields unconditionally
+on every save — simpler than diffing old vs. new field values, and
+observably identical, since recomputing with unchanged inputs yields the
+same numbers.
 
 ### Acceptance Criteria
 - [x] Editing weight, height, age, gender, activity level, or goal
@@ -111,8 +120,8 @@ up.
       reproduces the same target
 - [x] Dashboard reflects the updated target immediately after save (the
       redirect to `/dashboard` happens after the `prisma.profile.upsert`
-      completes, so the next read is always current) — not yet visually
-      confirmed since the Dashboard itself is still `EPIC-06`'s
-      placeholder, but the stored value is correct and available
-- [ ] **Macro targets** (`proteinTargetG`/`carbsTargetG`/`fatTargetG`) are
-      not yet computed at all — blocked on `TICKET-013`
+      completes, so the next read is always current) — now visually
+      confirmed too, since EPIC-06's Dashboard exists and was verified
+      end-to-end against a real database
+- [x] **Macro targets** (`proteinTargetG`/`carbsTargetG`/`fatTargetG`) are
+      computed and stored the same way, now that `TICKET-013` exists

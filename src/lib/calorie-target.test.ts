@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateBmr,
   calculateDailyCalorieTarget,
+  calculateMacroTargets,
   calculateTdee,
 } from "./calorie-target";
 
@@ -73,5 +74,25 @@ describe("calculateDailyCalorieTarget", () => {
       goal: "LOSE",
     });
     expect(target).toBeGreaterThanOrEqual(1200);
+  });
+});
+
+describe("calculateMacroTargets", () => {
+  it("splits calories 30/40/30 protein/carbs/fat", () => {
+    // 2000 kcal: protein 600kcal/4=150g, carbs 800kcal/4=200g, fat 600kcal/9=66.67g≈67g
+    expect(calculateMacroTargets(2000)).toEqual({
+      proteinTargetG: 150,
+      carbsTargetG: 200,
+      fatTargetG: 67,
+    });
+  });
+
+  it("grams sum back to roughly the calorie target within rounding tolerance", () => {
+    const target = 1850;
+    const { proteinTargetG, carbsTargetG, fatTargetG } =
+      calculateMacroTargets(target);
+    const recomputedCalories =
+      proteinTargetG * 4 + carbsTargetG * 4 + fatTargetG * 9;
+    expect(Math.abs(recomputedCalories - target)).toBeLessThanOrEqual(10);
   });
 });

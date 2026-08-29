@@ -1,11 +1,11 @@
 import type { ActivityLevel, Gender, Goal } from "@prisma/client";
 
-// Pulled forward from EPIC-02 (TICKET-011/012) because TICKET-008
+// TICKET-011/012 were pulled forward from EPIC-02 because TICKET-008
 // (EPIC-01's profile onboarding form) requires a daily calorie target
 // at save time — see tickets/INDEX.md's "Cross-epic build-order
 // exceptions" and tickets/EPIC-01-auth-profile.md's TICKET-008 for why.
-// Macro-target computation (TICKET-013) is intentionally NOT included
-// here; it's left for when EPIC-02 is formally implemented.
+// TICKET-013 (macro targets) was added later, once EPIC-06's Dashboard
+// (TICKET-027) needed it.
 
 // Mifflin-St Jeor activity multipliers (standard values).
 const ACTIVITY_MULTIPLIERS: Record<ActivityLevel, number> = {
@@ -57,4 +57,38 @@ export function calculateDailyCalorieTarget(params: {
   const tdee = calculateTdee(bmr, params.activityLevel);
   const adjusted = tdee + GOAL_ADJUSTMENT_KCAL[params.goal];
   return Math.max(MIN_DAILY_CALORIE_TARGET, Math.round(adjusted));
+}
+
+// TICKET-013: macro split as documented percentages of total calories —
+// 30% protein / 40% carbohydrate / 30% fat, a standard balanced-diet
+// default (not extreme, not goal-specific — the brief doesn't ask for
+// per-goal macro tuning, just gram targets). 4 kcal/g for protein and
+// carbs, 9 kcal/g for fat.
+const MACRO_CALORIE_SHARE = {
+  protein: 0.3,
+  carbs: 0.4,
+  fat: 0.3,
+} as const;
+
+const PROTEIN_CARBS_KCAL_PER_GRAM = 4;
+const FAT_KCAL_PER_GRAM = 9;
+
+export function calculateMacroTargets(dailyCalorieTarget: number): {
+  proteinTargetG: number;
+  carbsTargetG: number;
+  fatTargetG: number;
+} {
+  return {
+    proteinTargetG: Math.round(
+      (dailyCalorieTarget * MACRO_CALORIE_SHARE.protein) /
+        PROTEIN_CARBS_KCAL_PER_GRAM,
+    ),
+    carbsTargetG: Math.round(
+      (dailyCalorieTarget * MACRO_CALORIE_SHARE.carbs) /
+        PROTEIN_CARBS_KCAL_PER_GRAM,
+    ),
+    fatTargetG: Math.round(
+      (dailyCalorieTarget * MACRO_CALORIE_SHARE.fat) / FAT_KCAL_PER_GRAM,
+    ),
+  };
 }

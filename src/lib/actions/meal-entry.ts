@@ -4,18 +4,9 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logMealEntrySchema } from "@/lib/validation/meal-entry";
+import { toDateOnly } from "@/lib/date-only";
 
 export type LogMealEntryActionState = { error?: string } | undefined;
-
-// Server's local calendar day, at midnight UTC, so it stores cleanly
-// into the @db.Date column without a timezone-driven off-by-one.
-function toDateOnly(dateStr?: string): Date {
-  if (dateStr) {
-    return new Date(`${dateStr}T00:00:00.000Z`);
-  }
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-}
 
 // Only ever redirect back to a same-origin path — formData's "from"
 // comes from a query param a user could tamper with, so this guards

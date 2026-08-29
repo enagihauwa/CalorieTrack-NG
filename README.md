@@ -169,21 +169,33 @@ the form it belongs to), the global "+ Add Food" button now carrying a
 entries snapshot their calories/macros at write time rather than
 recomputing from live food data later.
 
-Verified with a production build, typecheck, lint, tests (11 passing),
+**EPIC-06** (dashboard) is implemented, along with the two tickets it
+pulled forward to get there: EPIC-05's `TICKET-023` (shared
+`MealBreakdown` component — its first real consumer) and EPIC-02's
+`TICKET-013` (macro targets, `src/lib/calorie-target.ts`'s
+`calculateMacroTargets`, 30/40/30 protein/carbs/fat split). The Dashboard
+(`/dashboard`) shows Today's Summary (target/consumed/remaining/exercise
+placeholder), a color-coded calorie progress bar, macro progress, an
+over-target warning, and the meal breakdown grouped by category —
+composed from `getDailySummary()` (`TICKET-029`, one query, no N+1).
+
+Verified with a production build, typecheck, lint, tests (13 passing),
 and headless-browser smoke tests. A local PostgreSQL 18 instance was set
 up (see `journal.md`'s 2026-08-29 later entries) and every migration
 applied — every route, every redirect, the full sign-up → onboarding →
 dashboard → edit → logout → login → wrong-password → duplicate-email
 flow, the seed script's idempotency, the food API's pagination/archiving
-behavior, and the full search → select → quantity → meal-category →
-submit → return-to-origin flow (with the resulting database rows
-checked directly for correct calorie/macro math) have all been exercised
-end-to-end against a real database, with zero console errors. Every
-EPIC-00, EPIC-01, EPIC-03, and EPIC-04 ticket is marked `Done`, plus
-EPIC-05's `TICKET-021`/`TICKET-022`.
+behavior, the full search → select → quantity → meal-category → submit →
+return-to-origin flow, and the Dashboard's empty/under-target/over-target
+states (including the exact warning message and progress bar color)
+have all been exercised end-to-end against a real database — with every
+displayed number cross-checked against either a direct `psql` read or
+hand-computed expected values, not just visually eyeballed. Every
+EPIC-00, EPIC-01, EPIC-03, EPIC-04, and EPIC-06 ticket is marked `Done`,
+plus EPIC-02's `TICKET-011`–`014` and EPIC-05's `TICKET-021`–`023`.
 
-Next up per `tickets/INDEX.md`: `EPIC-05`'s `TICKET-023` (shared meal-
-breakdown UI component) — not blocked on anything, and `EPIC-06`'s
-Dashboard ticket explicitly depends on it, so it's the natural first
-step into `EPIC-06`. `EPIC-02`'s `TICKET-013` (macro targets) is
-likewise open but blocks nothing ahead of it in the build order.
+Next up per `tickets/INDEX.md`: `EPIC-07` (food history) — the next epic
+in the build order. `EPIC-05`'s `TICKET-024` (edit/delete a logged
+entry) is open and unblocked (`MealBreakdown` now has somewhere real to
+render it) but was left for whenever history or further dashboard
+polish makes it a priority.

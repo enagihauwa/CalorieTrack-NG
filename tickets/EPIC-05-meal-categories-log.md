@@ -14,12 +14,11 @@ Source: Requirements Section 5 (Meal Categories).
 > was built together with EPIC-04's `TICKET-019` (they're one unit of
 > work: a form and the action it submits to).
 >
-> `TICKET-023` (the shared meal-breakdown UI component) is next, not
-> deferred — it isn't blocked on anything, and EPIC-06's `TICKET-025`
-> (Dashboard) explicitly depends on it existing, so building it is the
-> natural first step of picking up EPIC-06. `TICKET-024` (edit/delete)
-> can follow once `TICKET-023` has somewhere real to render logged
-> entries.
+> `TICKET-023` is also done now — built together with EPIC-06's
+> Dashboard, its first real consumer. `TICKET-024` (edit/delete) is next
+> — `MealBreakdown` has somewhere real to render entries now, so adding
+> edit/delete actions to it is the natural next step, not blocked on
+> anything.
 
 ---
 
@@ -80,7 +79,7 @@ of work (same pattern as EPIC-01's profile form + its server action).
 
 ## TICKET-023: Meal breakdown UI (grouped by category, subtotals)
 
-**Priority:** P0 · **Status:** Not Started · **Depends on:** TICKET-022
+**Priority:** P0 · **Status:** Done · **Depends on:** TICKET-022
 
 ### Description
 Display logged entries grouped by meal category with subtotals, matching
@@ -92,14 +91,28 @@ Breakfast – 450 kcal
 - Tea – 150 kcal
 ```
 
+`src/components/meal-breakdown.tsx` — pure presentational, takes
+already-aggregated data from `getDailySummary()` (TICKET-029,
+`src/lib/daily-summary.ts`) as props. Built alongside EPIC-06's
+Dashboard, its first consumer; History (EPIC-07) will be the second.
+
 ### Acceptance Criteria
-- [ ] Entries grouped under Breakfast/Lunch/Dinner/Snacks headers
-- [ ] Each group header shows its subtotal kcal
-- [ ] Each line item shows food name and its calorie contribution
-- [ ] Categories with no entries yet either hide or show "no items
-      logged" (consistent, documented choice)
-- [ ] Reused by both Dashboard (today) and History (selected date) —
-      built as a shared component, not duplicated
+- [x] Entries grouped under Breakfast/Lunch/Dinner/Snacks headers
+- [x] Each group header shows its subtotal kcal
+- [x] Each line item shows food name and its calorie contribution
+      (quantity shown too when it isn't 1, e.g. "5× Egusi Soup")
+- [x] Categories with no entries yet are hidden entirely (documented
+      choice — matches Section 5's example, which only lists categories
+      that actually have something logged)
+- [x] Reused by both Dashboard (today) and History (selected date, once
+      EPIC-07 builds it) — a plain function component taking `groups` as
+      a prop, no page-specific logic inside it
+- [x] **Verified against a real database:** logged Jollof Rice
+      (Breakfast), Beans (Lunch), and Egusi Soup (Dinner), confirmed all
+      three category headers and exact subtotals rendered, and that the
+      empty Snacks category was hidden; then logged 5× Egusi Soup under
+      Snacks and confirmed it appeared with the correct "5× Egusi Soup —
+      2000 kcal" line and category subtotal
 
 ---
 

@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { profileSchema } from "@/lib/validation/profile";
-import { calculateDailyCalorieTarget } from "@/lib/calorie-target";
+import {
+  calculateDailyCalorieTarget,
+  calculateMacroTargets,
+} from "@/lib/calorie-target";
 
 export type ProfileActionState = { error?: string } | undefined;
 
@@ -39,11 +42,17 @@ export async function saveProfileAction(
   }
 
   const dailyCalorieTarget = calculateDailyCalorieTarget(parsed.data);
+  const macroTargets = calculateMacroTargets(dailyCalorieTarget);
 
   await prisma.profile.upsert({
     where: { userId: session.user.id },
-    create: { userId: session.user.id, ...parsed.data, dailyCalorieTarget },
-    update: { ...parsed.data, dailyCalorieTarget },
+    create: {
+      userId: session.user.id,
+      ...parsed.data,
+      dailyCalorieTarget,
+      ...macroTargets,
+    },
+    update: { ...parsed.data, dailyCalorieTarget, ...macroTargets },
   });
 
   redirect("/dashboard");
