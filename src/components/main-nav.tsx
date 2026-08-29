@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOutAction } from "@/lib/actions/auth";
 
 const NAV_SECTIONS = [
@@ -14,6 +14,18 @@ const NAV_SECTIONS = [
 
 export function MainNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Preserve the current query string in `from` (e.g. History's
+  // ?date=...) so returning here after Add Food lands on the same date,
+  // and pass that date through separately since Add Food reads it as
+  // its own top-level param, not nested inside `from`.
+  const query = searchParams.toString();
+  const fullPath = query ? `${pathname}?${query}` : pathname;
+  const currentDate = searchParams.get("date");
+  const addFoodHref = `/food/add?from=${encodeURIComponent(fullPath)}${
+    currentDate ? `&date=${currentDate}` : ""
+  }`;
 
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/90">
@@ -53,7 +65,7 @@ export function MainNav() {
 
         <div className="flex items-center gap-2">
           <Link
-            href={`/food/add?from=${encodeURIComponent(pathname)}`}
+            href={addFoodHref}
             className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
           >
             + Add Food

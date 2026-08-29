@@ -75,7 +75,7 @@ export default async function DashboardPage() {
 
       <div>
         <h2 className="mb-2 text-lg font-semibold">Meals</h2>
-        <MealBreakdown groups={summary.groups} />
+        <MealBreakdown groups={summary.groups} returnPath="/dashboard" />
       </div>
     </div>
   );

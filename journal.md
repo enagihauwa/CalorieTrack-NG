@@ -691,3 +691,103 @@ plus all of EPIC-02 (`TICKET-011`–`014`) and EPIC-05's `TICKET-021`–
 a logged entry, EPIC-05) is open and unblocked but wasn't picked up this
 session — noted as a candidate whenever history or dashboard polish
 becomes the priority.
+
+---
+
+## 2026-08-29 (the last one, really) — Implemented EPIC-07 (History)
+
+**What I worked on**
+
+`TICKET-024` (EPIC-05, edit/delete — pulled forward because `TICKET-031`
+requires it) and all of EPIC-07: `TICKET-030` (date navigation),
+`TICKET-031` (fetch/display for a selected date), `TICKET-032` (empty
+state + backfill).
+
+**What got built**
+
+- `MealBreakdownEntry` gained a `mealCategory` field (needed so the
+  inline edit form has something to default its meal-category `<select>`
+  to).
+- `src/lib/actions/meal-entry.ts` gained `updateMealEntryAction` and
+  `deleteMealEntryAction`. Both re-fetch the entry server-side and check
+  `entry.userId === session.user.id` before mutating — never trust a
+  client-supplied ownership claim. Neither redirects; both call
+  `revalidatePath(returnPath)` so editing/deleting stays on the same
+  page instead of navigating away.
+- `src/components/meal-entry-row.tsx` — per-entry inline edit (toggle
+  open, quantity + meal category, Save/Cancel) and delete (native
+  `confirm()` before submitting). `MealBreakdown` now renders this
+  instead of a plain `<li>`, and takes a `returnPath` prop to pass down.
+- `src/components/history-date-nav.tsx` + `src/app/(app)/history/page.tsx`
+  — prev/next buttons and a date input, both driving `?date=`; the page
+  clamps a future date server-side as a backstop beyond the client-side
+  `max`/disabled-button guards.
+- Fixed a real gap in `MainNav`: it built the "+ Add Food" href from
+  `usePathname()` alone, which doesn't include the query string — so on
+  `/history?date=2026-08-20`, the button would have silently dropped the
+  date and always logged to today. Added `useSearchParams()` and now
+  builds `from` from the full path+query, extracting `date` separately
+  since Add Food reads it as its own top-level param.
+
+**Verification — same lesson as before, applied faster this time**
+
+First run of the full script had a `router.push()` timing race
+(clicking "Previous day" and reading the result before the client-side
+navigation settled) that produced a genuinely misleading pass: a click
+on "+ Add Food" landed on what LOOKED like a valid flow, but the
+`waitForUrlContains("date=...")` check I'd written matched immediately
+because the URL *already* contained that string before the click (the
+`/food/add` URL itself has `date=` in it) — so it never actually waited
+for the post-submit redirect, and the "History (yesterday, after
+backfill)" body I logged was actually the Add Food form's own pending
+state, not the History page. Recognized the pattern from EPIC-04's
+"Apple" false positive immediately this time and fixed it the same way:
+replaced loose `.includes()` URL checks with `waitForURL` predicates
+that check the exact pathname, not just "does the string appear
+somewhere." Re-ran clean, and this time the "after backfill" content
+genuinely was the History page showing Egusi Soup / Dinner / 400 kcal.
+
+Also confirmed the backfilled entry's actual date in the database via
+`psql` (not just what the UI displayed) — `2026-08-28`, matching the
+date that was clicked to, not `2026-08-29` (today). This is the check
+that actually matters: a UI showing the right thing on screen doesn't
+prove the write went to the right row.
+
+**An unexplained find in `profile.ts`**
+
+While finishing up, lint flagged an `any` type in
+`src/lib/actions/profile.ts` — a `try/catch` around the profile upsert,
+catching Prisma's `P2003` (foreign-key violation) and returning a
+friendly "account not found" message instead of a 500. I hadn't written
+this in the current session's tracked edits, and `git diff HEAD` showed
+it wasn't part of the last commit either — it was sitting as an
+uncommitted change I can't fully account for, most likely something
+added while chasing a stale-session error during earlier testing (this
+is exactly the shape of bug my own repeated `TRUNCATE "User"` calls
+between test runs could trigger — a session issued against a user row
+that no longer exists) in a part of this long conversation that's since
+been summarized out of context. Rather than either blindly keep
+unexplained code or strip out something that might be a real fix: kept
+it, since it's not incorrect and doesn't conflict with anything
+documented, but replaced the `any` with a properly typed
+`Prisma.PrismaClientKnownRequestError` check and smoke-tested the normal
+profile-save path afterward to confirm the fix didn't change ordinary
+behavior. Recording it here specifically so it's not a silent mystery
+in the git history — if this pattern (working-tree changes I can't trace
+to a specific instruction) shows up again, it's worth treating as a
+signal to check context-summarization boundaries more carefully.
+
+**Cleanup**
+
+Truncated `User`/`Profile`/`WeightLog`/`MealEntry` after verification;
+seeded `Food` data untouched throughout.
+
+**State at end of session**
+
+Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06, and EPIC-07 ticket is
+`Done`, plus all of EPIC-02 and EPIC-05. Build, typecheck, lint, tests
+(13 passing), and format all clean.
+
+**Next up**
+
+`EPIC-08` (progress & statistics) per the build order.

@@ -14,11 +14,10 @@ Source: Requirements Section 5 (Meal Categories).
 > was built together with EPIC-04's `TICKET-019` (they're one unit of
 > work: a form and the action it submits to).
 >
-> `TICKET-023` is also done now — built together with EPIC-06's
-> Dashboard, its first real consumer. `TICKET-024` (edit/delete) is next
-> — `MealBreakdown` has somewhere real to render entries now, so adding
-> edit/delete actions to it is the natural next step, not blocked on
-> anything.
+> `TICKET-023` is also done — built together with EPIC-06's Dashboard,
+> its first consumer; EPIC-07's History page is the second. `TICKET-024`
+> (edit/delete) is done too, built alongside EPIC-07 since History is
+> where a "wrong past-day entry" correction matters most.
 
 ---
 
@@ -104,9 +103,9 @@ Dashboard, its first consumer; History (EPIC-07) will be the second.
 - [x] Categories with no entries yet are hidden entirely (documented
       choice — matches Section 5's example, which only lists categories
       that actually have something logged)
-- [x] Reused by both Dashboard (today) and History (selected date, once
-      EPIC-07 builds it) — a plain function component taking `groups` as
-      a prop, no page-specific logic inside it
+- [x] Reused by both Dashboard (today) and History (selected date) — a
+      plain function component taking `groups` and a `returnPath` as
+      props, no page-specific logic inside it
 - [x] **Verified against a real database:** logged Jollof Rice
       (Breakfast), Beans (Lunch), and Egusi Soup (Dinner), confirmed all
       three category headers and exact subtotals rendered, and that the
@@ -118,15 +117,40 @@ Dashboard, its first consumer; History (EPIC-07) will be the second.
 
 ## TICKET-024: Edit / delete a logged food entry
 
-**Priority:** P1 · **Status:** Not Started · **Depends on:** TICKET-023
+**Priority:** P1 · **Status:** Done · **Depends on:** TICKET-023
 
 ### Description
 Users make logging mistakes (wrong quantity, wrong meal, wrong food) —
 they need to fix or remove an entry without deleting and re-adding
 manually through search.
 
+`src/components/meal-entry-row.tsx` (client component, owned by
+`MealBreakdown`) renders inline edit (quantity + meal category, toggled
+open per-row) and delete (with a native `confirm()` prompt) for every
+entry. Server actions `updateMealEntryAction`/`deleteMealEntryAction` in
+`src/lib/actions/meal-entry.ts`. Scope decision: only quantity and meal
+category are editable in place — changing the *food* itself isn't,
+since that's effectively a different entry; the existing delete-and-
+re-add-via-search flow already covers "wrong food."
+
+Neither action redirects — both call `revalidatePath()` on the page they
+were submitted from (`returnPath`, passed down from Dashboard/History)
+so the same page re-renders with fresh data instead of navigating away.
+
 ### Acceptance Criteria
-- [ ] Each logged entry has edit and delete actions
-- [ ] Editing quantity recomputes calories/macros for that entry
-- [ ] Deleting removes the entry and updates daily totals immediately
-- [ ] Edits/deletes are scoped to the owning user only
+- [x] Each logged entry has edit and delete actions
+- [x] Editing quantity recomputes calories/macros for that entry — from
+      the food's *current* per-serving values × the new quantity, same
+      snapshot-at-write approach as TICKET-022's create path
+- [x] Deleting removes the entry and updates daily totals immediately
+      (via `revalidatePath`, no page navigation)
+- [x] Edits/deletes are scoped to the owning user only — both actions
+      re-fetch the entry server-side and check `entry.userId ===
+      session.user.id` before mutating; a mismatched id is treated as
+      "not found," not a permission error that would leak whether the
+      entry exists
+- [x] **Verified against a real database:** edited a Jollof Rice
+      (Breakfast) entry to quantity 2 / Dinner, confirmed the Dashboard
+      immediately showed "700 kcal" under a new Dinner group with
+      Breakfast gone; then deleted it and confirmed the empty-state
+      message appeared

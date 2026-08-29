@@ -19,13 +19,10 @@ Source: Requirements Section 4 (Add Food) and Section 12 (prominent
 > manage) while satisfying every acceptance criterion below exactly the
 > same way from the user's perspective.
 >
-> **Scope note on TICKET-019's date-context criterion:** the mechanism
-> (accepting an optional `?date=` param, defaulting to today) is fully
-> implemented and works end-to-end. What's *not* built yet is a caller
-> that passes a non-today date — that's the History page (EPIC-07),
-> which is still a placeholder. Verified today's-date behavior directly;
-> the past-date path will get its first real exercise once EPIC-07 wires
-> its "+ Add Food" links with `&date=`.
+> **Update:** the date-context mechanism's past-date path is now also
+> verified — EPIC-07's History page (`TICKET-032`) is the caller that
+> exercises it, confirmed end-to-end including a direct database read of
+> the resulting `MealEntry.date`. See `tickets/EPIC-07-food-history.md`.
 
 ---
 
@@ -95,9 +92,9 @@ later, per the schema's own comment on why.
       re-checked for `isArchived` at submit time, not trusted from the
       client) and redirects back to the originating page
 - [x] The flow logs to a target date, not always "today": the mechanism
-      (`?date=` param, defaulting to today) is fully implemented — see
-      this epic's top note on why the past-date path is unverified
-      (no caller yet; that's EPIC-07)
+      (`?date=` param, defaulting to today) is fully implemented and now
+      verified end-to-end for a past date too, via EPIC-07's History
+      page — see this epic's top note
 - [x] **Verified against a real database:** added Jollof Rice ×2 and
       confirmed the created `MealEntry` row was exactly 700 kcal / 16g
       protein / 110g carbs / 24g fat (350/8/55/12 × 2); added Beans ×1.5
@@ -117,9 +114,11 @@ search → add flow (TICKET-018/019) from anywhere in the app, matching
 Section 12's requirement that it be prominent and always available.
 
 `MainNav` (already rendering the button on every `(app)` page since
-EPIC-00) now builds its href as `/food/add?from=<current pathname>` via
-`usePathname()`, so `logMealEntryAction` knows where to redirect back to
-on success.
+EPIC-00) builds its href as `/food/add?from=<current path + query>`,
+also extracting a `date` param when present (e.g. on History) and
+passing it through separately — so `logMealEntryAction` knows where to
+redirect back to, and on which date to log, regardless of what page the
+button was clicked from.
 
 ### Acceptance Criteria
 - [x] Button visible and functional from Dashboard, Food, History,
@@ -131,14 +130,15 @@ on success.
       forced to Dashboard) — verified: launched from `/dashboard`,
       landed back on `/dashboard` after submit; launched from `/food`
       (via a food card, not the nav button), landed back on `/food`.
-      "Totals refreshed if visible on that page" has nothing to verify
-      yet — Dashboard/History don't render any totals until EPIC-06/07
-      exist; once they're server components reading fresh data on every
-      navigation, this is automatic, not something to build separately
+      "Totals refreshed if visible on that page" is confirmed too, now
+      that EPIC-06/07 exist: Dashboard and History are Server Components
+      re-reading fresh data on every navigation, so a newly-added entry
+      always shows immediately — nothing extra needed to "refresh" it
 - [x] Launched from Dashboard/Food/Progress/Profile, the flow logs to
-      today (verified); launched from History for a past date, it would
-      log to that date via the same `?date=` mechanism TICKET-019
-      implements — unverified end-to-end since History doesn't exist yet
+      today; launched from History while viewing a past date, the button
+      carries that date through and logs to it — verified: on
+      `/history?date=2026-08-28`, the nav button's href included
+      `date=2026-08-28`
 
 ---
 

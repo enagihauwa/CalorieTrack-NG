@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { profileSchema } from "@/lib/validation/profile";
@@ -44,16 +45,32 @@ export async function saveProfileAction(
   const dailyCalorieTarget = calculateDailyCalorieTarget(parsed.data);
   const macroTargets = calculateMacroTargets(dailyCalorieTarget);
 
-  await prisma.profile.upsert({
-    where: { userId: session.user.id },
-    create: {
-      userId: session.user.id,
-      ...parsed.data,
-      dailyCalorieTarget,
-      ...macroTargets,
-    },
-    update: { ...parsed.data, dailyCalorieTarget, ...macroTargets },
-  });
+  try {
+    await prisma.profile.upsert({
+      where: { userId: session.user.id },
+      create: {
+        userId: session.user.id,
+        ...parsed.data,
+        dailyCalorieTarget,
+        ...macroTargets,
+      },
+      update: { ...parsed.data, dailyCalorieTarget, ...macroTargets },
+    });
+  } catch (error) {
+    // Stale session referencing a User row that no longer exists (e.g.
+    // the account was deleted) — the FK violation is the honest signal,
+    // not something to let bubble up as an unhandled 500.
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return {
+        error:
+          "Your account could not be found. Please log out and sign in again.",
+      };
+    }
+    throw error;
+  }
 
   redirect("/dashboard");
 }

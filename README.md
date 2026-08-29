@@ -190,12 +190,32 @@ return-to-origin flow, and the Dashboard's empty/under-target/over-target
 states (including the exact warning message and progress bar color)
 have all been exercised end-to-end against a real database — with every
 displayed number cross-checked against either a direct `psql` read or
-hand-computed expected values, not just visually eyeballed. Every
-EPIC-00, EPIC-01, EPIC-03, EPIC-04, and EPIC-06 ticket is marked `Done`,
-plus EPIC-02's `TICKET-011`–`014` and EPIC-05's `TICKET-021`–`023`.
+hand-computed expected values, not just visually eyeballed.
 
-Next up per `tickets/INDEX.md`: `EPIC-07` (food history) — the next epic
-in the build order. `EPIC-05`'s `TICKET-024` (edit/delete a logged
-entry) is open and unblocked (`MealBreakdown` now has somewhere real to
-render it) but was left for whenever history or further dashboard
-polish makes it a priority.
+**EPIC-07** (food history) is implemented, along with EPIC-05's
+`TICKET-024` (edit/delete a logged entry) — pulled forward because
+`TICKET-031`'s own acceptance criteria require past-day entries to be
+editable, not just viewable. History (`/history?date=...`) reuses the
+same `getDailySummary()`/`MealBreakdown` as the Dashboard, with
+prev/next-day buttons and a date picker (both — see that epic's note),
+a server-side clamp against future dates, and an empty-state "+ Add
+Food" link that backfills the *viewed* date — the first real exercise of
+`TICKET-019`'s date-context mechanism, previously only plumbing.
+Editing/deleting an entry stays on the same page via `revalidatePath()`
+rather than redirecting.
+
+Verified end-to-end against the real database: edited an entry's
+quantity and meal category and watched the Dashboard update immediately
+without a page reload; deleted it and confirmed the empty state;
+confirmed History defaulting to today matches the Dashboard's own
+numbers exactly (same aggregation, not two implementations that happen
+to agree); navigated to a past date, backfilled it via Add Food, and
+confirmed via a direct `psql` read that the created row's date was the
+backfilled date, not today; confirmed that backfill didn't leak into
+today's view; confirmed a future date requested directly via URL gets
+clamped server-side. Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06,
+and EPIC-07 ticket is marked `Done`, plus EPIC-02's `TICKET-011`–`014`
+and all of EPIC-05.
+
+Next up per `tickets/INDEX.md`: `EPIC-08` (progress & statistics) — the
+next epic in the build order.

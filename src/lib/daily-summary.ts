@@ -20,6 +20,7 @@ export type MealBreakdownEntry = {
   foodName: string;
   quantity: number;
   calories: number;
+  mealCategory: MealCategory;
 };
 
 export type MealBreakdownGroup = {
@@ -66,6 +67,7 @@ export async function getDailySummary(
         foodName: entry.food.name,
         quantity: entry.quantity,
         calories: entry.calories,
+        mealCategory: entry.mealCategory,
       })),
     };
   });
