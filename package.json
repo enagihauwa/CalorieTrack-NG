@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "postinstall": "prisma generate",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "make-admin": "tsx scripts/make-admin.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

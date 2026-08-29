@@ -132,8 +132,20 @@ Requires Node.js 20+ and a PostgreSQL database.
 npm install                 # installs deps; postinstall runs `prisma generate`
 cp .env.example .env.local  # then fill in DATABASE_URL / NEXTAUTH_SECRET
 npx prisma migrate dev --name init   # creates the database schema
+npm run seed                # seeds the food database (20 Nigerian + common foods)
 npm run dev                 # http://localhost:3000
 ```
+
+To reach the admin dashboard (`/admin`), sign up a normal account
+through the app first, then promote it:
+
+```bash
+npm run make-admin -- you@example.com
+```
+
+There's no self-service "become admin" path in the app itself — this is
+the only way to grant it (see `tickets/EPIC-10-admin-dashboard.md`'s
+`TICKET-040`).
 
 Other scripts: `npm run build` (production build), `npm run lint`,
 `npm run typecheck`, `npm run format` / `format:check` (Prettier — scoped
@@ -142,110 +154,58 @@ to code, not the hand-formatted `*.md` planning docs), `npm run test`
 
 ## Status
 
-**EPIC-00** (project setup) and **EPIC-01** (auth & profile) are
-implemented: Next.js 16 + TypeScript + Tailwind app, Prisma schema, dev
-tooling, the main navigation shell, sign-up/login/logout (NextAuth v5,
-credentials + JWT sessions), route protection, and the profile
-onboarding/edit form — which also required pulling forward EPIC-02's
-BMR/TDEE/goal-adjustment calculation (`src/lib/calorie-target.ts`, fully
-unit-tested) since the profile form needs it at save time. See
-`tickets/INDEX.md`'s "Cross-epic build-order exceptions" for why.
+**All 11 epics are implemented and marked `Done` in `tickets/`** — every
+MVP feature in the requirements brief, plus the admin dashboard. This
+section is a snapshot; the play-by-play (decisions, bugs found and
+fixed, cross-epic ordering exceptions) lives in `journal.md`, and the
+exact scope of each feature lives in its ticket under `tickets/`.
 
-**EPIC-03** (food database) is also implemented: the `Food` model
-(already migrated as part of EPIC-00), a seed script covering all 20
-foods named across Sections 4 and 15 (`prisma/seed.ts`, sourced from
-standard nutrition references — Section 10's own worked example for
-Jollof Rice), and a read-only, paginated `/api/foods` + `/api/foods/:id`
-API that excludes archived foods from listings while still resolving
-them by id for historical entries.
+**What's built:**
 
-**EPIC-04** (food search & add) is implemented too, along with the two
-EPIC-05 tickets it structurally depends on: search (extends `/api/foods`
-with a `q` param, shared `FoodSearch` component), the Add Food flow
-(`/food/add` — a dedicated page rather than a modal, see that epic's
-design note), the meal-entry write action (`TICKET-022`, built alongside
-the form it belongs to), the global "+ Add Food" button now carrying a
-`from` param for return-navigation, and the `/food` browse page. Meal
-entries snapshot their calories/macros at write time rather than
-recomputing from live food data later.
+- **Auth & profile** — sign-up/login/logout (NextAuth v5, credentials +
+  JWT), route protection, onboarding that computes a daily calorie
+  target (Mifflin-St Jeor) and macro targets (30/40/30 protein/carbs/fat
+  split) on save.
+- **Food database** — 20 seeded foods (Sections 4 + 15 of the brief),
+  search, a browsable `/food` page, and a read-only paginated API.
+- **Logging** — search → select → quantity → meal category → confirm,
+  with calories/macros snapshotted at write time so a later admin edit
+  never rewrites history. Every logged entry is editable and deletable
+  in place.
+- **Dashboard** (`/dashboard`) — today's target/consumed/remaining,
+  a color-coded progress bar, macro progress, an over-target warning,
+  and the meal breakdown by category.
+- **History** (`/history?date=...`) — the same aggregation and
+  breakdown as the Dashboard for any past date, with an empty-state
+  "+ Add Food" that backfills the *viewed* date, not today.
+- **Progress** (`/progress`) — a weekly calorie chart with a
+  daily-target reference line and 7-day average, plus full weight
+  tracking (log, goal, chart, editable history).
+- **Admin** (`/admin`, visible in the nav only to admins) — basic
+  stats, food management (add/edit/soft-delete/unarchive), and a
+  read-only registered-users list. No self-service path to become an
+  admin — `npm run make-admin -- <email>` is the only way in.
 
-**EPIC-06** (dashboard) is implemented, along with the two tickets it
-pulled forward to get there: EPIC-05's `TICKET-023` (shared
-`MealBreakdown` component — its first real consumer) and EPIC-02's
-`TICKET-013` (macro targets, `src/lib/calorie-target.ts`'s
-`calculateMacroTargets`, 30/40/30 protein/carbs/fat split). The Dashboard
-(`/dashboard`) shows Today's Summary (target/consumed/remaining/exercise
-placeholder), a color-coded calorie progress bar, macro progress, an
-over-target warning, and the meal breakdown grouped by category —
-composed from `getDailySummary()` (`TICKET-029`, one query, no N+1).
+**Verification approach used throughout:** every feature was exercised
+end-to-end against a real local PostgreSQL instance via a headless
+browser, not just built and eyeballed. Displayed numbers were
+cross-checked against direct `psql` reads or hand-computed expected
+values (e.g. confirming an admin's food-calorie edit does *not* alter
+an already-logged meal entry's stored total, verified by reading that
+row before and after the edit). This surfaced and fixed several real
+bugs along the way — a stuck-open inline edit form, an ambiguous
+button-text selector that silently clicked the wrong element more than
+once, a nav link that dropped History's date param — all documented in
+`journal.md` where they happened.
 
-Verified with a production build, typecheck, lint, tests (13 passing),
-and headless-browser smoke tests. A local PostgreSQL 18 instance was set
-up (see `journal.md`'s 2026-08-29 later entries) and every migration
-applied — every route, every redirect, the full sign-up → onboarding →
-dashboard → edit → logout → login → wrong-password → duplicate-email
-flow, the seed script's idempotency, the food API's pagination/archiving
-behavior, the full search → select → quantity → meal-category → submit →
-return-to-origin flow, and the Dashboard's empty/under-target/over-target
-states (including the exact warning message and progress bar color)
-have all been exercised end-to-end against a real database — with every
-displayed number cross-checked against either a direct `psql` read or
-hand-computed expected values, not just visually eyeballed.
+**Known gaps / honest caveats:**
 
-**EPIC-07** (food history) is implemented, along with EPIC-05's
-`TICKET-024` (edit/delete a logged entry) — pulled forward because
-`TICKET-031`'s own acceptance criteria require past-day entries to be
-editable, not just viewable. History (`/history?date=...`) reuses the
-same `getDailySummary()`/`MealBreakdown` as the Dashboard, with
-prev/next-day buttons and a date picker (both — see that epic's note),
-a server-side clamp against future dates, and an empty-state "+ Add
-Food" link that backfills the *viewed* date — the first real exercise of
-`TICKET-019`'s date-context mechanism, previously only plumbing.
-Editing/deleting an entry stays on the same page via `revalidatePath()`
-rather than redirecting.
-
-Verified end-to-end against the real database: edited an entry's
-quantity and meal category and watched the Dashboard update immediately
-without a page reload; deleted it and confirmed the empty state;
-confirmed History defaulting to today matches the Dashboard's own
-numbers exactly (same aggregation, not two implementations that happen
-to agree); navigated to a past date, backfilled it via Add Food, and
-confirmed via a direct `psql` read that the created row's date was the
-backfilled date, not today; confirmed that backfill didn't leak into
-today's view; confirmed a future date requested directly via URL gets
-clamped server-side. Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06,
-and EPIC-07 ticket is marked `Done`, plus EPIC-02's `TICKET-011`–`014`
-and all of EPIC-05.
-
-**EPIC-08** (progress & statistics) and **EPIC-09** (weight tracking) are
-implemented together — `/progress` needed both, so they were built and
-verified as one unit. It composes: a weekly calorie bar chart with a
-daily-target reference line and a 7-day average stat, plus a full weight
-section — line chart with an optional goal-weight reference line, a log-
-weight form (upserts on `(userId, date)`, so logging twice for a day
-edits rather than duplicates), a separate goal-weight form, and an
-editable/deletable weight history list. `WeightLog` and
-`Profile.goalWeightKg` were already in the schema from EPIC-00 — no new
-migration needed.
-
-Verified end-to-end against the real database, including every empty
-state for a fresh profile (zero-bar chart, 0 kcal/day average,
-Starting/Current falling back to profile weight, "Goal: Not set"), the
-Starting-vs-Current split across two dated entries, a goal weight
-persisting to the database exactly as entered, and inline edit/delete
-on weight history. That last check caught a real bug: after saving an
-edit, the inline form was staying open instead of collapsing back to a
-normal row — visible because editing a weight value (unlike editing a
-meal entry into a different category) never causes the row to remount,
-so React held onto the stale "still editing" state. Fixed in both
-`WeightLogRow` and the equivalent `MealEntryRow` (which had the same
-latent bug, just not triggered by the EPIC-07 tests since those happened
-to always change category) by detecting the pending→success transition
-and closing the form automatically. See `journal.md` for the full story.
-
-Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06, EPIC-07, EPIC-08, and
-EPIC-09 ticket is marked `Done`, plus all of EPIC-02 and EPIC-05.
-
-Next up per `tickets/INDEX.md`: `EPIC-10` (admin dashboard) — the last
-remaining epic, plus `EPIC-02`'s `TICKET-013` is already done so nothing
-from earlier epics is outstanding except polish.
+- No production deployment; verified locally only, against a Postgres
+  instance found already running on the dev machine (see `journal.md`'s
+  2026-08-29 entries for how).
+- No automated integration/e2e test suite checked into the repo — the
+  Playwright verification scripts used throughout development were
+  scratch files, run and discarded each session rather than committed.
+  Unit tests (`npm run test`) cover the pure calorie/macro math only.
+- Exercise tracking, barcode scanning, and the other items in Section
+  14 ("Future Features") were deliberately left out, per the brief.

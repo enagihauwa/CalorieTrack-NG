@@ -888,3 +888,105 @@ typecheck, lint, tests (13 passing), and format all clean.
 **Next up**
 
 `EPIC-10` (admin dashboard) — the last epic in the build order.
+
+---
+
+## 2026-08-29 (the actual last one) — Implemented EPIC-10 (Admin)
+
+**What I worked on**
+
+All of it: `TICKET-040` (role & gating) through `TICKET-045` (stats).
+This is the last epic — every ticket in `tickets/` is now `Done`.
+
+**What got built**
+
+- `User.role` was already in the schema from EPIC-00 — nothing to
+  migrate. `src/lib/require-admin.ts`'s `requireAdmin()` re-reads the
+  role from the database on every call instead of trusting a JWT claim
+  (the JWT never carried `role` to begin with, by choice — a demoted
+  admin should lose access on their very next request, not whenever
+  their session happens to expire).
+- `scripts/make-admin.ts`, run via `npm run make-admin -- <email>` — the
+  one and only way to grant admin access. No UI path to self-promote,
+  on purpose.
+- `/admin` (stats), `/admin/foods` (list, with inline Delete/Unarchive),
+  `/admin/foods/new` + `/admin/foods/[id]/edit` (one shared `FoodForm`
+  component), `/admin/users` (read-only, `passwordHash` excluded at the
+  Prisma `select` level, not filtered out after the fact). An "Admin"
+  link appears in the main nav only for admins, checked in the `(app)`
+  layout (cosmetic only — the actual gate is `requireAdmin()` on the
+  routes themselves, so a stale read here couldn't have been a security
+  hole even before I thought about it that way).
+- `setFoodArchivedAction` takes an explicit target state
+  (`archived: "true"`/`"false"`) instead of a toggle, so "Delete" and
+  "Unarchive" are unambiguously the same action pointed in different
+  directions, not a flip that could land wrong under a stale read.
+
+**Verification — the two-birds test that mattered most**
+
+The single most important thing to prove in this whole epic: editing a
+food's calories in the admin panel must never change a calorie total
+someone already logged. Wrote the test to actually prove it, not just
+assert it: logged a real Jollof Rice entry (350 kcal, stored on the
+`MealEntry` row), edited Jollof Rice's admin record to 999 kcal, then
+read the *original* `MealEntry` row back from the database — still
+exactly 350. Confirmed the `Food` row itself really did change to 999
+(so it wasn't just that the edit silently failed). This is the kind of
+check that's easy to satisfy by construction (the update action simply
+has no code path that touches `MealEntry`) but still worth actually
+running, since "the code doesn't touch that table" and "I verified it
+doesn't" are different levels of confidence.
+
+Also verified the live-promotion design worked as intended, not just as
+argued: signed up a user, confirmed they were blocked from `/admin` and
+saw no "Admin" nav link, ran `make-admin` for that email **without
+logging the browser session out**, and confirmed the very next request
+showed the Admin link and allowed the route — proving the "read role
+fresh from the database, don't trust the JWT" decision actually behaves
+the way it was designed to, in the same session, no re-login needed.
+
+**Two more selector bugs, same lesson as always**
+
+Hit the exact same class of bug as EPIC-04 and EPIC-07's verification
+scripts: `page.click('a:has-text("+ Add Food")')` on `/admin/foods`
+matched the *global nav's* Add Food button instead of the admin page's
+own "+ Add Food" link, since both have identical text and Playwright
+matched whichever came first in the DOM (the header, which renders
+before the page content). Fixed by scoping to `main >> a:has-text(...)`,
+same fix as before. Also hit a plain SQL bug in my own verification
+script — `SELECT calories FROM "MealEntry" me JOIN "Food" f ...` failed
+with "column reference is ambiguous" since both tables have a `calories`
+column; fixed by qualifying it as `me.calories`. Neither was a product
+bug, but both are worth naming here since the pattern ("assume the
+verification script is correct, doubt the product") has been wrong
+often enough this project that it's now the first thing to check when a
+check fails unexpectedly.
+
+**Cleanup**
+
+Deleted the test food created during verification, restored Jollof
+Rice's calories to 350, confirmed the `Food` table was back to exactly
+20 rows before finishing. Truncated `User`/`Profile`/etc. as usual.
+
+**State at end of session**
+
+Every ticket in every epic (`EPIC-00` through `EPIC-10`) is `Done`.
+Build, typecheck, lint, tests (13 passing), and format all clean.
+Rewrote the README's `Status` section from an epic-by-epic changelog
+(which had grown long enough to be hard to actually read) into a
+condensed feature summary plus an explicit "known gaps" section — the
+detailed history stays here in the journal, where it's actually useful
+as a record rather than as the first thing a reader sees.
+
+**What's genuinely not done, for the record**
+
+No production deployment. No committed automated e2e test suite — every
+verification in this project was a scratch Playwright script, written,
+run, and discarded each session; the patterns are solid and repeat
+easily, but nothing is checked into the repo to re-run them later
+without rewriting. If a real CI pipeline or regression safety net is
+wanted going forward, formalizing a handful of these scripts (auth
+flow, add-food-and-verify-in-db, admin edit-doesn't-affect-history) into
+a committed test suite would be the natural next step — but that's a
+scope decision for whoever picks this up next, not something to add
+unprompted after the ticket list is already closed out.

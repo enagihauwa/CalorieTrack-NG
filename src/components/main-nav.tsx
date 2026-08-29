@@ -12,7 +12,7 @@ const NAV_SECTIONS = [
   { href: "/profile", label: "Profile" },
 ] as const;
 
-export function MainNav() {
+export function MainNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -61,6 +61,19 @@ export function MainNav() {
               </Link>
             );
           })}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+              className={
+                pathname.startsWith("/admin")
+                  ? "rounded-md bg-emerald-600 px-3 py-1.5 text-white"
+                  : "rounded-md px-3 py-1.5 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              }
+            >
+              Admin
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
