@@ -45,6 +45,13 @@ tickets themselves, but are listed here too so the exception isn't missed:
   depends on `TICKET-039` (weight progress chart, EPIC-09). Pull
   `TICKET-037` and `TICKET-039` forward and build them before closing out
   `TICKET-036`, even though EPIC-09 is numbered after EPIC-08.
+- **EPIC-01 ↔ EPIC-02.** Found while implementing EPIC-01, not during the
+  original audit: `TICKET-008` (profile onboarding form, EPIC-01) has an
+  acceptance criterion requiring a computed daily calorie target at save
+  time, which depends on `TICKET-011`/`TICKET-012` (EPIC-02). Both were
+  pulled forward and implemented as part of EPIC-01 — see
+  `tickets/EPIC-01-auth-profile.md`'s top note. Macro targets
+  (`TICKET-013`) were left for EPIC-02 proper.
 
 ## Full ticket list
 

@@ -142,16 +142,30 @@ to code, not the hand-formatted `*.md` planning docs), `npm run test`
 
 ## Status
 
-EPIC-00 (project setup) is implemented: Next.js 16 + TypeScript + Tailwind
-app, Prisma schema, dev tooling (ESLint/Prettier/Vitest), and the main
-navigation shell with placeholder routes for all five sections. Verified
-with a production build, typecheck, lint, tests, and a headless-browser
-smoke test of every route.
+**EPIC-00** (project setup) and **EPIC-01** (auth & profile) are
+implemented: Next.js 16 + TypeScript + Tailwind app, Prisma schema, dev
+tooling, the main navigation shell, sign-up/login/logout (NextAuth v5,
+credentials + JWT sessions), route protection, and the profile
+onboarding/edit form — which also required pulling forward EPIC-02's
+BMR/TDEE/goal-adjustment calculation (`src/lib/calorie-target.ts`, fully
+unit-tested) since the profile form needs it at save time. See
+`tickets/INDEX.md`'s "Cross-epic build-order exceptions" for why.
+
+Verified with a production build, typecheck, lint, tests (11 passing),
+and headless-browser smoke tests — every route, every unauthenticated
+redirect, and both public forms render correctly with zero console
+errors.
 
 **Not yet done:** no PostgreSQL instance was available in the environment
-this was built in, so the schema has been validated (`prisma generate`)
-but never migrated against a real database — that's the first thing to do
-before EPIC-01 needs working `Profile`/`User` tables. See `TICKET-001`/
-`TICKET-003` in `tickets/EPIC-00-project-setup.md` for exact next steps.
+this was built in, so nothing that touches Prisma at runtime — sign-up,
+login, profile save — has been exercised end-to-end against a real
+database. Schema validation (`prisma generate`) passes; the actual
+migration (`npx prisma migrate dev --name init`) has never been run. This
+is the first thing to do next — see `TICKET-001`/`TICKET-003` in
+`tickets/EPIC-00-project-setup.md`, and `TICKET-006`–`010` in
+`tickets/EPIC-01-auth-profile.md` for what to verify once a database is
+available.
 
-Next up per `tickets/INDEX.md`: `EPIC-01` (auth/profile).
+Next up per `tickets/INDEX.md`: `EPIC-03` (food database) — `EPIC-02`'s
+remaining scope (macro targets, `TICKET-013`) is what's left there after
+the calculation core was pulled into EPIC-01.

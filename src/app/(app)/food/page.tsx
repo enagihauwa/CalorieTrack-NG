@@ -1,6 +1,9 @@
+import { requireProfile } from "@/lib/require-profile";
 import { PlaceholderPage } from "@/components/placeholder-page";
 
-export default function FoodPage() {
+export default async function FoodPage() {
+  await requireProfile();
+
   return (
     <PlaceholderPage
       title="Food"

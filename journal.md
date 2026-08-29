@@ -222,3 +222,91 @@ first migration — see README "Status" for the exact next command.
 
 Get a real `DATABASE_URL` wired up and run `prisma migrate dev --name
 init`, then move to `EPIC-01` (auth/profile) per the build order.
+
+---
+
+## 2026-08-29 (later) — Committed, then implemented EPIC-01
+
+**What I worked on**
+
+Committed EPIC-00's work as the repo's first commit (was asked to do
+that before continuing). Then implemented `EPIC-01` (auth & profile):
+sign-up, login/logout, session management, route protection, and the
+profile onboarding/edit form.
+
+**Decisions and problems hit while implementing**
+
+- **Found a third cross-epic ordering conflict, missed in the earlier
+  audit.** `TICKET-008` (profile form, EPIC-01) requires a computed
+  daily calorie target at save time, which depends on `TICKET-011`/
+  `TICKET-012` (EPIC-02) — same class of bug as the EPIC-04↔05 and
+  EPIC-08↔09 conflicts found earlier, just not caught until actually
+  implementing EPIC-01. Resolved the same way: pulled the minimal needed
+  piece forward. Implemented `src/lib/calorie-target.ts` (Mifflin-St Jeor
+  BMR → TDEE → goal adjustment, floored at 1200 kcal) with full unit
+  test coverage, satisfying `TICKET-011`/`TICKET-012` fully. Left
+  `TICKET-013` (macro targets) for when EPIC-02 is formally picked up —
+  nothing in EPIC-03 needs it, so it doesn't block moving forward.
+  Updated `tickets/INDEX.md`'s cross-epic exceptions section and both
+  affected epic files to record this.
+- **Chose Server Actions over hand-written API routes.** Next.js 16 +
+  React 19 (`useActionState`) makes Server Actions the more idiomatic,
+  less boilerplate-heavy way to handle sign-up/login/profile-save than a
+  client `fetch()` calling a REST API route. NextAuth v5 supports calling
+  its `signIn`/`signOut` directly from server actions, which is what
+  made this clean — no need for `next-auth/react`'s client-side
+  `useSession`/`signIn` at all, since nothing needs reactive client-side
+  session state right now.
+- **Auth.js v5 + Prisma + Edge middleware needs a config split.** Prisma
+  can't run in Next.js's Edge runtime, but middleware does. Split the
+  NextAuth config into `src/auth.config.ts` (edge-safe: pages, the
+  `authorized` callback, JWT/session callbacks — no providers) and
+  `src/auth.ts` (full config, adds the Credentials provider which needs
+  Prisma + bcrypt). Middleware imports only the edge-safe half. This is
+  the documented Auth.js v5 pattern for this exact combination, not
+  something improvised.
+- **Next.js 16 renamed "middleware" to "proxy."** `middleware.ts` built
+  clean but printed a deprecation warning pointing at
+  `npx @next/codemod middleware-to-proxy`. The codemod itself refused to
+  run against an uncommitted working tree (reasonable safety check), and
+  since the actual change is just a file rename (verified the exact
+  expected filename via `next`'s own source —
+  `node_modules/next/dist/lib/constants.js`'s `PROXY_FILENAME`) rather
+  than risk an automated tool touching a tree full of new unreviewed
+  files, renamed `middleware.ts` → `src/proxy.ts` by hand. Build
+  confirms the warning is gone.
+- **Verified everything that doesn't require a live database.** Build,
+  typecheck, lint, and the 11-test Vitest suite (calorie-target logic)
+  all pass. Also did a live headless-browser pass: unauthenticated
+  requests to `/` and `/dashboard` both correctly land on `/login`
+  (proves the Edge proxy's `authorized` callback works without touching
+  Prisma), and both `/login` and `/signup` render their forms correctly
+  — screenshotted, zero console errors. Used a throwaway `.env.local`
+  with a placeholder `AUTH_SECRET` for this (JWT signing needs *a*
+  secret, even for routes that never touch the database) and deleted it
+  afterward so it doesn't linger with a fake `DATABASE_URL` that could
+  mislead whoever picks this up next.
+- **What's still unverified:** the actual sign-up → auto-login →
+  profile-save → dashboard-redirect chain has never run against a real
+  Prisma connection, because there still isn't one available in this
+  environment. Every ticket this touches is marked "Implemented,
+  unverified against a real DB" rather than "Done," and the README's
+  Status section says the same. This isn't a formality — until someone
+  runs it against a real database, "the code compiles and the schema is
+  valid" is a real but limited form of confidence, not proof the feature
+  works.
+
+**State at end of session**
+
+`npm run build`, `lint`, `typecheck`, `test` (11 passing) all clean.
+Route structure is now `src/app/(app)/*` (protected: dashboard, food,
+food/add, history, progress, profile — all behind `requireProfile()` or
+`requireSession()`) and `src/app/(auth)/*` (public: login, signup).
+
+**Next up**
+
+Same blocker as EPIC-00: get a real `DATABASE_URL`, run
+`prisma migrate dev --name init`, then actually exercise the sign-up/
+login/profile flow end-to-end before trusting it. After that, `EPIC-03`
+(food database) is next per the build order — `EPIC-02`'s remaining
+piece (`TICKET-013`, macro targets) doesn't block it.

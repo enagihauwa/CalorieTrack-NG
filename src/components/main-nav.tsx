@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOutAction } from "@/lib/actions/auth";
 
 const NAV_SECTIONS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -50,12 +51,23 @@ export function MainNav() {
           })}
         </nav>
 
-        <Link
-          href="/food/add"
-          className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
-        >
-          + Add Food
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/food/add"
+            className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
+          >
+            + Add Food
+          </Link>
+
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            >
+              Log out
+            </button>
+          </form>
+        </div>
       </div>
     </header>
   );
