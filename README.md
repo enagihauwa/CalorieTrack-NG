@@ -217,5 +217,35 @@ clamped server-side. Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06,
 and EPIC-07 ticket is marked `Done`, plus EPIC-02's `TICKET-011`–`014`
 and all of EPIC-05.
 
-Next up per `tickets/INDEX.md`: `EPIC-08` (progress & statistics) — the
-next epic in the build order.
+**EPIC-08** (progress & statistics) and **EPIC-09** (weight tracking) are
+implemented together — `/progress` needed both, so they were built and
+verified as one unit. It composes: a weekly calorie bar chart with a
+daily-target reference line and a 7-day average stat, plus a full weight
+section — line chart with an optional goal-weight reference line, a log-
+weight form (upserts on `(userId, date)`, so logging twice for a day
+edits rather than duplicates), a separate goal-weight form, and an
+editable/deletable weight history list. `WeightLog` and
+`Profile.goalWeightKg` were already in the schema from EPIC-00 — no new
+migration needed.
+
+Verified end-to-end against the real database, including every empty
+state for a fresh profile (zero-bar chart, 0 kcal/day average,
+Starting/Current falling back to profile weight, "Goal: Not set"), the
+Starting-vs-Current split across two dated entries, a goal weight
+persisting to the database exactly as entered, and inline edit/delete
+on weight history. That last check caught a real bug: after saving an
+edit, the inline form was staying open instead of collapsing back to a
+normal row — visible because editing a weight value (unlike editing a
+meal entry into a different category) never causes the row to remount,
+so React held onto the stale "still editing" state. Fixed in both
+`WeightLogRow` and the equivalent `MealEntryRow` (which had the same
+latent bug, just not triggered by the EPIC-07 tests since those happened
+to always change category) by detecting the pending→success transition
+and closing the form automatically. See `journal.md` for the full story.
+
+Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06, EPIC-07, EPIC-08, and
+EPIC-09 ticket is marked `Done`, plus all of EPIC-02 and EPIC-05.
+
+Next up per `tickets/INDEX.md`: `EPIC-10` (admin dashboard) — the last
+remaining epic, plus `EPIC-02`'s `TICKET-013` is already done so nothing
+from earlier epics is outstanding except polish.

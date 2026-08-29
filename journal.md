@@ -791,3 +791,100 @@ Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06, and EPIC-07 ticket is
 **Next up**
 
 `EPIC-08` (progress & statistics) per the build order.
+
+---
+
+## 2026-08-29 (final entry for today) — Implemented EPIC-08 + EPIC-09 (Progress, Weight)
+
+**What I worked on**
+
+All of EPIC-08 (`TICKET-033`–`036`) and EPIC-09 (`TICKET-037`–`039`)
+together, per the documented cross-epic build-order note — `/progress`
+needed both halves, so there was no clean way to build one without the
+other.
+
+**What got built**
+
+- Schema-wise, nothing new: `WeightLog` and `Profile.goalWeightKg` were
+  already sitting in the migration from EPIC-00's forward-looking
+  skeleton. Pure application-layer work this time.
+- `src/lib/weekly-summary.ts` — `getWeeklyCalories()`, one query for a
+  7-day window, grouped by date in memory. Deliberately does *not* call
+  `getDailySummary()` seven times — TICKET-033 says "reuse TICKET-029,"
+  but a literal seven-calls interpretation would recreate exactly the
+  N+1 pattern TICKET-029 itself exists to avoid, just at the weekly
+  level. Interpreted "reuse" as reusing the *pattern* (single query,
+  grouped in memory) instead.
+- `src/lib/actions/weight.ts` — `logWeightAction` (upsert on the
+  `(userId, date)` unique constraint — confirmed the Prisma-generated
+  compound key name is `userId_date` by grepping the generated client
+  types rather than guessing), `deleteWeightLogAction`,
+  `setGoalWeightAction`.
+- Recharts (installed since EPIC-00, never actually used until now) for
+  both the weekly calorie bar chart and the weight line chart. Hit one
+  real Recharts 3.x typing issue: an explicitly-typed `(value: number) =>
+  [...]` Tooltip formatter didn't satisfy Recharts' own `Formatter` type
+  (which allows `ValueType | undefined`). Fixed by removing the explicit
+  parameter type and letting it infer from Recharts' own type — simpler
+  than fighting the library's types with a wider annotation.
+- `/progress` composes all of it: weekly chart + average, then the full
+  weight section (stats, chart, log form, goal form, history list) —
+  one Server Component, `Promise.all` for the two independent queries.
+
+**A real bug found by the verification, not by inspection**
+
+Editing a weight-history entry saved correctly (confirmed via the
+database and via the updated stat values on screen) but the inline edit
+form stayed open afterward instead of collapsing back to a normal row —
+visible in a full-page screenshot, not just something a body-text check
+would catch. Root cause: `WeightLogRow`'s `isEditing` state is local
+`useState`, and nothing ever set it back to `false` after a successful
+save. It happened to *look* fixed during EPIC-07's testing of the
+equivalent `MealEntryRow`, purely because that test always changed the
+meal category too, which moves the entry to a different group and
+remounts the row with fresh state — coincidentally resetting
+`isEditing`. An edit that only changes quantity (or, here, only the
+weight value) never remounts, so the stale `isEditing: true` persists
+through the `revalidatePath()`-triggered re-render. Fixed properly in
+both components: a `useRef` tracking the previous `isPending` value, and
+a `useEffect` that closes the form when `isPending` transitions from
+`true` to `false` with no error — i.e., "a submit just finished
+successfully." Re-verified after the fix: the row now correctly
+collapses to show the new value.
+
+This is worth remembering as a pattern, not just a one-off fix: any
+inline-edit-toggle component built the same way (local `isEditing`
+state, server action, no redirect) has this same latent bug unless the
+edit also changes something that reorders/regroups the list. Worth
+checking any *future* component built on this pattern for the same
+issue rather than assuming it's fine because a similar-looking earlier
+one appeared to work.
+
+**Verification**
+
+Full flow against the real database: empty `/progress` for a fresh
+profile (all empty states correct, no crashes); logged a meal today,
+confirmed the weekly average was exactly `50 kcal/day` (350÷7, including
+the six zero days — not averaged only over days with entries); logged
+today's weight and confirmed Starting=Current=75kg; logged a second
+entry 7 days back and confirmed Starting (80kg, earlier date) vs.
+Current (75kg, today) split correctly — read the exact `dd` stat values
+via a Playwright locator, not just eyeballing text; set a goal weight
+and confirmed the exact value round-tripped through the database; edited
+and deleted history entries, confirming database row counts at each
+step, not just what the UI displayed.
+
+**Cleanup**
+
+Truncated test data after verification; seeded `Food` data untouched
+throughout, as always.
+
+**State at end of session**
+
+Every EPIC-00, EPIC-01, EPIC-03, EPIC-04, EPIC-06, EPIC-07, EPIC-08, and
+EPIC-09 ticket is `Done`, plus all of EPIC-02 and EPIC-05. Build,
+typecheck, lint, tests (13 passing), and format all clean.
+
+**Next up**
+
+`EPIC-10` (admin dashboard) — the last epic in the build order.

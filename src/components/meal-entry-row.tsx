@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   updateMealEntryAction,
   deleteMealEntryAction,
@@ -32,6 +32,18 @@ export function MealEntryRow({
     updateMealEntryAction,
     undefined,
   );
+
+  // Close the inline editor once a submit finishes without error. Without
+  // this, a successful save that doesn't move the entry to a different
+  // meal-category group (so the row isn't remounted) leaves the form
+  // sitting open with stale values, even though the save worked.
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (wasPending.current && !isPending && !state?.error) {
+      setIsEditing(false);
+    }
+    wasPending.current = isPending;
+  }, [isPending, state]);
 
   if (isEditing) {
     return (
