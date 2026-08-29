@@ -1,0 +1,7 @@
+node_modules
+.next
+coverage
+package-lock.json
+
+# Hand-formatted planning docs (prose wrapping, tables) — not code.
+*.md

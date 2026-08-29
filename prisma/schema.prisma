@@ -1,0 +1,166 @@
+// CalorieTrack NG — Prisma schema
+// Skeleton defined per tickets/EPIC-00-project-setup.md (TICKET-003),
+// with the fields each downstream epic's tickets decided it needs
+// already folded in (see comments per model) so this doesn't need
+// retrofitting later.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- EPIC-01 / TICKET-040 -------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile    Profile?
+  mealEntries MealEntry[]
+  weightLogs WeightLog[]
+}
+
+// --- EPIC-01 (TICKET-009) / EPIC-02 (TICKET-011-013) / EPIC-09 (TICKET-037) -
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum Goal {
+  LOSE
+  MAINTAIN
+  GAIN
+}
+
+model Profile {
+  id             String        @id @default(cuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name           String
+  age            Int
+  gender         Gender
+  weightKg       Float
+  heightCm       Float
+  activityLevel  ActivityLevel
+  goal           Goal
+
+  // TICKET-037 (EPIC-09): optional, set from the Weight Tracking page,
+  // not the onboarding form — see that ticket for why.
+  goalWeightKg   Float?
+
+  // TICKET-011/012/013 (EPIC-02): computed on create/update, stored so
+  // the Dashboard doesn't recompute BMR/TDEE on every read.
+  dailyCalorieTarget Int?
+  proteinTargetG     Int?
+  carbsTargetG       Int?
+  fatTargetG         Int?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+// --- EPIC-03 (TICKET-015) -------------------------------------------------
+
+model Food {
+  id          String   @id @default(cuid())
+  name        String
+  // Free-text, not an enum — TICKET-015 decided categories must stay
+  // extendable by admins, not hardcoded.
+  category    String
+  calories    Int
+  proteinG    Float
+  carbsG      Float
+  fatG        Float
+  // Descriptive display string only (e.g. "1 cup") — never parsed or
+  // used in arithmetic. See TICKET-015.
+  servingSize String
+
+  // TICKET-043 (EPIC-10): soft-delete flag so admin "delete" never
+  // breaks a MealEntry's foreign key or a user's logged history.
+  isArchived  Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mealEntries MealEntry[]
+
+  @@index([name])
+}
+
+// --- EPIC-05 (TICKET-021/022) ---------------------------------------------
+
+enum MealCategory {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACKS
+}
+
+model MealEntry {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodId       String
+  food         Food         @relation(fields: [foodId], references: [id])
+
+  quantity     Float
+  mealCategory MealCategory
+
+  // Date-only in practice (no time-of-day tracked) — the app always
+  // queries by calendar date. See TICKET-022.
+  date         DateTime     @db.Date
+
+  // Snapshot values computed at write time (food.calories * quantity,
+  // etc.) — NOT recomputed from live Food data on read, so an admin
+  // editing a food (TICKET-042) never retroactively changes a past
+  // day's logged totals.
+  calories     Int
+  proteinG     Float
+  carbsG       Float
+  fatG         Float
+
+  createdAt    DateTime     @default(now())
+
+  @@index([userId, date])
+}
+
+// --- EPIC-09 (TICKET-037) --------------------------------------------------
+
+model WeightLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  weightKg  Float
+  date      DateTime @db.Date
+
+  createdAt DateTime @default(now())
+
+  // TICKET-037: one entry per date — edit the existing row instead of
+  // creating a duplicate when a user logs weight twice for the same day.
+  @@unique([userId, date])
+  @@index([userId, date])
+}

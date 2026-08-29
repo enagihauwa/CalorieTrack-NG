@@ -1,0 +1,344 @@
+CALORIETRACK NG – WEB-BASED MVP CALORIE TRACKER
+
+1. MVP CONCEPT
+
+CalorieTrack NG is a web-based calorie tracking application designed to help users monitor their daily food intake, calories consumed, and progress toward their weight goals.
+
+The main goal of the MVP is simple:
+
+Help users know how many calories they consume each day and whether they are within their daily calorie target.
+
+
+2. USER REGISTRATION AND PROFILE
+
+Users should be able to create an account and provide basic information such as:
+
+- Name
+- Age
+- Gender
+- Weight
+- Height
+- Activity level
+- Goal:
+  - Lose weight
+  - Maintain weight
+  - Gain weight
+
+The application can use this information to estimate the user's daily calorie target.
+
+
+3. DASHBOARD
+
+The dashboard should be the main page users see after logging in.
+
+Example:
+
+Today's Summary
+
+Daily Target: 2,000 kcal
+Consumed: 1,350 kcal
+Remaining: 650 kcal
+Exercise: 200 kcal
+
+The dashboard can also display basic macronutrient information:
+
+Protein: 75g / 120g
+Carbohydrates: 150g / 250g
+Fat: 45g / 65g
+
+A circular progress indicator or progress bar can show the user's calorie consumption.
+
+Example:
+
+1,350 / 2,000 kcal
+
+650 calories remaining.
+
+
+4. ADD FOOD
+
+This is one of the most important features of the MVP.
+
+Users should be able to click:
+
++ Add Food
+
+They can then search for a food.
+
+Examples:
+
+- Rice
+- Beans
+- Chicken
+- Egg
+- Bread
+- Yam
+- Banana
+- Apple
+- Jollof rice
+
+After selecting a food, the user enters the quantity or serving size.
+
+Example:
+
+Jollof Rice
+1 serving = 350 kcal
+Quantity = 2
+
+Total = 700 kcal
+
+The application then adds the calories to the user's daily consumption.
+
+
+5. MEAL CATEGORIES
+
+When adding food, users should be able to select a meal category:
+
+- Breakfast
+- Lunch
+- Dinner
+- Snacks
+
+Example:
+
+Breakfast – 450 kcal
+- 2 Eggs – 140 kcal
+- Bread – 160 kcal
+- Tea – 150 kcal
+
+Lunch – 700 kcal
+- Jollof Rice – 500 kcal
+- Chicken – 200 kcal
+
+Snacks – 200 kcal
+- Banana – 100 kcal
+- Groundnuts – 100 kcal
+
+
+6. DAILY CALORIE PROGRESS
+
+The application should display the user's daily calorie progress.
+
+Example:
+
+1,350 / 2,000 kcal
+
+█████████████░░░░░░
+
+650 calories remaining.
+
+If the user exceeds their target, the application can display:
+
+WARNING:
+You have exceeded your daily calorie target by 150 kcal.
+
+
+7. FOOD HISTORY
+
+Users should be able to view foods they have logged previously.
+
+Example:
+
+August 28
+
+Breakfast – 450 kcal
+Lunch – 700 kcal
+Dinner – 550 kcal
+Snacks – 200 kcal
+
+Total: 1,900 kcal
+
+Users should be able to select different dates to view their previous records.
+
+
+8. PROGRESS AND STATISTICS
+
+The MVP should include a simple Progress page.
+
+It can show:
+
+- Calories consumed per day
+- Average daily calories
+- Weight
+- Weekly calorie trend
+
+Example:
+
+Weekly Calories
+
+Monday – 1,850 kcal
+Tuesday – 1,700 kcal
+Wednesday – 2,000 kcal
+Thursday – 1,600 kcal
+Friday – 1,900 kcal
+
+A simple chart can be used to visualize the information.
+
+
+9. WEIGHT TRACKING
+
+Users should be able to record their weight periodically.
+
+Example:
+
+Starting Weight: 85 kg
+Current Weight: 82 kg
+Goal Weight: 75 kg
+
+The application can display the user's weight progress over time.
+
+
+10. FOOD DATABASE
+
+The application should have a food database containing information such as:
+
+Food Name
+Category
+Calories
+Protein
+Carbohydrates
+Fat
+Serving Size
+
+Example:
+
+Food: Jollof Rice
+Category: Rice
+Calories: 350 kcal
+Protein: 8g
+Carbohydrates: 55g
+Fat: 12g
+Serving Size: 1 cup
+
+For the MVP, the database can contain a limited number of commonly eaten foods.
+
+
+11. ADMIN DASHBOARD
+
+An admin dashboard can be included to manage the food database.
+
+The administrator should be able to:
+
+- Add foods
+- Edit foods
+- Delete foods
+- View registered users
+- View basic application statistics
+
+
+12. MAIN NAVIGATION
+
+Keep the MVP simple with approximately five main sections:
+
+- Dashboard
+- Food
+- History
+- Progress
+- Profile
+
+There should also be a prominent:
+
++ Add Food
+
+button.
+
+
+13. MVP FEATURES
+
+The first version should include:
+
+1. User registration and login
+2. User profile
+3. Daily calorie target calculation
+4. Food database
+5. Food search
+6. Add food
+7. Breakfast, lunch, dinner and snacks
+8. Daily calorie counter
+9. Food history
+10. Basic weight tracking
+11. Simple weekly progress chart
+
+
+14. FUTURE FEATURES
+
+These features can be added after the MVP:
+
+- Barcode scanning
+- AI food recognition from photos
+- AI meal recommendations
+- Restaurant food database
+- Water tracking
+- Exercise tracking
+- Meal planning
+- Notifications and reminders
+- Personalized diet plans
+- Social/community features
+- Apple Health/Google Fit integration
+- Smartwatch and wearable integration
+
+
+15. UNIQUE MVP IDEA – CALORIETRACK NG
+
+Instead of building a generic calorie tracker, the application can focus on Nigerian foods.
+
+The food database can include common Nigerian meals such as:
+
+Breakfast:
+- Akara
+- Pap
+- Bread
+- Eggs
+- Moi Moi
+
+Lunch/Dinner:
+- Jollof Rice
+- Fried Rice
+- White Rice
+- Beans
+- Eba
+- Amala
+- Pounded Yam
+- Egusi Soup
+- Okra Soup
+- Afang Soup
+- Chicken
+- Fish
+
+This gives the application a clear target audience and makes it different from generic calorie-tracking applications.
+
+
+16. BASIC USER JOURNEY
+
+SIGN UP
+    ↓
+Enter age, height, weight and activity level
+    ↓
+Application calculates daily calorie target
+    ↓
+DASHBOARD
+    ↓
+View daily calorie target
+    ↓
+Click + ADD FOOD
+    ↓
+Search for food
+    ↓
+Select portion/quantity
+    ↓
+Add to breakfast, lunch, dinner or snacks
+    ↓
+Calories are automatically updated
+    ↓
+View daily progress
+    ↓
+View history and weekly progress
+
+
+17. CORE MVP OBJECTIVE
+
+The MVP should focus on one main problem:
+
+"Help users easily track what they eat and understand how their daily calorie intake compares with their target."
+
+The first version should be simple, clean, fast and easy to use. More advanced AI, barcode scanning, integrations and meal-planning features can be added after the basic calorie tracking workflow is working properly.
