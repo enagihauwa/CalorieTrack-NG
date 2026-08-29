@@ -1,13 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
-// TICKET-017: read-only list endpoint. Excludes archived foods by
-// default (TICKET-043's soft-delete) — search (TICKET-018) and Add Food
-// (TICKET-019) should never surface one. Write endpoints belong to
+// TICKET-017 (list/get) + TICKET-018 (search): read-only list endpoint,
+// with an optional `q` for case-insensitive partial name match. Excludes
+// archived foods by default (TICKET-043's soft-delete) — search and Add
+// Food (TICKET-019) should never surface one. Write endpoints belong to
 // EPIC-10 (Admin), not here.
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -21,8 +23,12 @@ export async function GET(request: NextRequest) {
     MAX_PAGE_SIZE,
     Math.max(1, Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE),
   );
+  const q = searchParams.get("q")?.trim();
 
-  const where = { isArchived: false };
+  const where: Prisma.FoodWhereInput = {
+    isArchived: false,
+    ...(q ? { name: { contains: q, mode: "insensitive" } } : {}),
+  };
 
   const [foods, total] = await Promise.all([
     prisma.food.findMany({

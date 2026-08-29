@@ -159,17 +159,31 @@ Jollof Rice), and a read-only, paginated `/api/foods` + `/api/foods/:id`
 API that excludes archived foods from listings while still resolving
 them by id for historical entries.
 
+**EPIC-04** (food search & add) is implemented too, along with the two
+EPIC-05 tickets it structurally depends on: search (extends `/api/foods`
+with a `q` param, shared `FoodSearch` component), the Add Food flow
+(`/food/add` — a dedicated page rather than a modal, see that epic's
+design note), the meal-entry write action (`TICKET-022`, built alongside
+the form it belongs to), the global "+ Add Food" button now carrying a
+`from` param for return-navigation, and the `/food` browse page. Meal
+entries snapshot their calories/macros at write time rather than
+recomputing from live food data later.
+
 Verified with a production build, typecheck, lint, tests (11 passing),
 and headless-browser smoke tests. A local PostgreSQL 18 instance was set
-up (see `journal.md`'s 2026-08-29 later entry) and every migration
+up (see `journal.md`'s 2026-08-29 later entries) and every migration
 applied — every route, every redirect, the full sign-up → onboarding →
 dashboard → edit → logout → login → wrong-password → duplicate-email
-flow, the seed script's idempotency, and the food API's pagination/
-archiving behavior have all been exercised end-to-end against a real
-database, with zero console errors. Every EPIC-00, EPIC-01, and EPIC-03
-ticket is marked `Done`.
+flow, the seed script's idempotency, the food API's pagination/archiving
+behavior, and the full search → select → quantity → meal-category →
+submit → return-to-origin flow (with the resulting database rows
+checked directly for correct calorie/macro math) have all been exercised
+end-to-end against a real database, with zero console errors. Every
+EPIC-00, EPIC-01, EPIC-03, and EPIC-04 ticket is marked `Done`, plus
+EPIC-05's `TICKET-021`/`TICKET-022`.
 
-Next up per `tickets/INDEX.md`: `EPIC-04` (food search & add) — building
-on the food API this epic just finished. `EPIC-02`'s remaining scope
-(macro targets, `TICKET-013`) is still open but blocks nothing ahead of
-it in the build order.
+Next up per `tickets/INDEX.md`: `EPIC-05`'s `TICKET-023` (shared meal-
+breakdown UI component) — not blocked on anything, and `EPIC-06`'s
+Dashboard ticket explicitly depends on it, so it's the natural first
+step into `EPIC-06`. `EPIC-02`'s `TICKET-013` (macro targets) is
+likewise open but blocks nothing ahead of it in the build order.

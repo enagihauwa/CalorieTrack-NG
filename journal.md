@@ -500,3 +500,103 @@ lint, tests (11 passing), and format all clean.
 
 `EPIC-04` (food search & add) per the build order — the food API this
 epic just built is exactly what `TICKET-018` (search) needs to extend.
+
+---
+
+## 2026-08-29 (yet later) — Implemented EPIC-04 (food search & add)
+
+**What I worked on**
+
+`TICKET-018` (search), `TICKET-019` (Add Food flow), `TICKET-020` (nav
+button return-navigation), `TICKET-046` (Food browse page) — plus
+`TICKET-021` (already done, EPIC-00) and `TICKET-022` (built together
+with `TICKET-019`, same reasoning as EPIC-01's profile form + action).
+
+**Design decisions**
+
+- **Add Food as a page, not a modal.** The tickets say "flow"/"opens,"
+  never "modal." A dedicated `/food/add` route with a `from` query param
+  for return-navigation is plain page routing — no overlay/portal state,
+  no focus-trap, no z-index concerns — and satisfies every acceptance
+  criterion identically from the user's side. Recorded as a design note
+  on the epic rather than silently deviating from an unstated assumption.
+- **One `FoodSearch` component, two behaviors.** The same search-with-
+  debounce component (`src/components/forms/food-search.tsx`) is used
+  by both the Add Food flow (selecting a food sets local state, moving
+  to the quantity step) and the `/food` browse page (selecting a food
+  navigates to `/food/add?foodId=...`) — the difference is entirely in
+  what `onSelect` does, not in the component. An empty search query
+  still fetches (page 1, alphabetical), so "browse all foods" and
+  "search foods" are the same code path, not two.
+- **Extended `/api/foods` with `?q=` rather than adding a new search
+  endpoint.** TICKET-017 already described itself as something search
+  would build on top of; a second endpoint doing almost the same query
+  would just be duplication.
+- **Snapshot values, not live lookups.** `logMealEntryAction` computes
+  `calories`/`proteinG`/`carbsG`/`fatG` from the food's *current* values
+  at write time and stores them on the `MealEntry` row — this was
+  already the schema's documented intent (EPIC-00's comment on why), just
+  now actually wired up. Verified directly (see below).
+- **Open-redirect guard on `from`.** The nav button and Add Food form
+  both carry `from` as a query param / hidden form field, which is
+  user-controllable input. `logMealEntryAction`'s `safeRedirectTarget()`
+  only honors it if it starts with `/` and not `//` (blocks protocol-
+  relative URL tricks), falling back to `/dashboard` otherwise — a small
+  but real thing to get right before shipping a redirect driven by
+  request data.
+
+**A React lint rule caught something worth fixing**
+
+`eslint-plugin-react-hooks` flagged `setLoading(true)` called
+synchronously in the search effect's body (not inside the debounce
+timeout) as a "cascading renders" risk. Moved it inside the `setTimeout`
+callback instead — technically changes the loading indicator's timing
+slightly (it now only flips on right before the debounced fetch starts,
+not instantly on every keystroke), which is the correct behavior anyway.
+
+**End-to-end verification, and another false-positive lesson**
+
+Full flow through a headless browser against the real database: browse
+`/food` (all 20 foods), search "rice" (exactly Fried/Jollof/White Rice,
+nothing else), search a nonsense term (no-results state), click a food
+from `/food` (lands pre-selected on `/food/add`, no search box shown),
+set quantity=2 and confirm the live total showed 700 kcal before
+submitting, submit and land back on `/food` (the origin), use the nav's
+"+ Add Food" button from `/dashboard` and confirm the URL carried
+`from=/dashboard`, add Beans ×1.5, confirm redirect back to `/dashboard`,
+log out and confirm both `/food` and `/food/add` are protected.
+
+One check flagged a failure — `page.textContent("body")` for the "rice"
+search claimed "Apple" was present, which would mean the search filter
+was broken. Screenshot showed the rendered result list was exactly
+right (Fried Rice, Jollof Rice, White Rice — no Apple). Same root cause
+as an EPIC-01 false positive from earlier: `textContent("body")` also
+picks up text inside Next.js's inert hydration `<script>` payload, which
+can carry serialized data from prefetched routes. Re-ran with a locator
+scoped to the actual rendered list items instead of the whole page —
+confirmed clean. Lesson applied going forward: scope DOM assertions to
+the specific rendered elements, never raw `body` text, when a script tag
+could plausibly contain the string being checked for.
+
+Read the two `MealEntry` rows created during verification directly via
+`psql` rather than trusting the UI: Jollof Rice ×2 stored as exactly
+700 kcal / 16g protein / 110g carbs / 24g fat (350/8/55/12 × 2); Beans
+×1.5 stored as exactly 381 kcal / 22.8g protein / 67.5g carbs / 1.65g
+fat (254/15.2/45/1.1 × 1.5). Both correct to the decimal.
+
+**Cleanup**
+
+Truncated `User`/`Profile`/`WeightLog`/`MealEntry` (test data) after
+verification; left the seeded `Food` table untouched.
+
+**State at end of session**
+
+Every EPIC-00, EPIC-01, EPIC-03, and EPIC-04 ticket is `Done`, plus
+EPIC-05's `TICKET-021`/`TICKET-022`. Build, typecheck, lint, tests (11
+passing), and format all clean.
+
+**Next up**
+
+`TICKET-023` (EPIC-05's shared meal-breakdown UI component) — not
+deferred, it's the natural first step into `EPIC-06` (Dashboard), which
+explicitly depends on it.

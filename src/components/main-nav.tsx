@@ -53,7 +53,7 @@ export function MainNav() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/food/add"
+            href={`/food/add?from=${encodeURIComponent(pathname)}`}
             className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
           >
             + Add Food
