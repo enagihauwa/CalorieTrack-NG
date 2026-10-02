@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOutAction } from "@/lib/actions/auth";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_SECTIONS = [
   { href: "/dashboard", label: "Dashboard" },
@@ -83,6 +84,8 @@ export function MainNav({ isAdmin }: { isAdmin: boolean }) {
           >
             + Add Food
           </Link>
+
+          <ThemeToggle />
 
           <form action={signOutAction}>
             <button
